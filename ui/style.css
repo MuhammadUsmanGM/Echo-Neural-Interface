@@ -1,0 +1,117 @@
+:root {
+    --core-color: #00f2ff;
+    --glow-color: rgba(0, 242, 255, 0.5);
+    --bg-dark: rgba(0, 0, 0, 0);
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: var(--bg-dark);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.echo-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    position: relative;
+}
+
+.oracle-wrapper {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.blobs-container {
+    filter: url('#goo');
+    position: relative;
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: contrast(10) hue-rotate(0deg);
+}
+
+.blob {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    background: var(--core-color);
+    border-radius: 50%;
+    opacity: 0.8;
+    filter: blur(10px);
+}
+
+.sphere-inner {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    background: radial-gradient(circle, white 0%, var(--core-color) 70%);
+    border-radius: 50%;
+    box-shadow: 0 0 30px var(--glow-color);
+    z-index: 10;
+}
+
+.blob-1 { animation: morph 4s infinite ease-in-out; }
+.blob-2 { animation: morph 6s infinite ease-in-out; width: 110px; height: 110px; opacity: 0.6; }
+.blob-3 { animation: morph 3s infinite ease-in-out; width: 90px; height: 90px; opacity: 0.4; }
+
+@keyframes morph {
+    0%, 100% { border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%; transform: translate3d(0,0,0) rotate(0deg); }
+    34% { border-radius: 70% 30% 46% 54% / 30% 29% 71% 70%; transform: translate3d(5px,5px,0) rotate(10deg); }
+    50% { border-radius: 100% 60% 60% 100% / 100% 100% 60% 60%; transform: translate3d(0,0,0) rotate(0deg); }
+    67% { border-radius: 100% 60% 60% 100% / 100% 100% 60% 60%; transform: translate3d(-5px,-2px,0) rotate(-10deg); }
+}
+
+.ring {
+    position: absolute;
+    border: 2px solid var(--core-color);
+    border-radius: 50%;
+    opacity: 0.3;
+}
+
+.ring-1 {
+    width: 180px;
+    height: 180px;
+    border-style: dashed;
+    animation: rotate 10s linear infinite;
+}
+
+.ring-2 {
+    width: 220px;
+    height: 220px;
+    border-style: double;
+    border-width: 1px;
+    animation: rotate-reverse 15s linear infinite;
+    opacity: 0.1;
+}
+
+.status-text {
+    margin-top: 60px;
+    color: var(--core-color);
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 0 0 5px var(--glow-color);
+    opacity: 0.8;
+    z-index: 100;
+}
+
+.blobs-container.talking .blob {
+    background: #00ff88; /* Emerald green when talking back */
+    box-shadow: 0 0 50px rgba(0, 255, 136, 0.8);
+    animation: morph 2s infinite ease-in-out;
+}
+
+.blobs-container.talking .sphere-inner {
+    background: radial-gradient(circle, white 0%, #00ff88 70%);
+}
