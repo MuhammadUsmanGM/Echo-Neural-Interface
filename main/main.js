@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut, Menu } = require('electron');
 const path = require('path');
 const GeminiBrain = require('../services/gemini');
 const SystemActions = require('../services/system');
@@ -12,6 +12,7 @@ const config = new ConfigManager();
 const pluginManager = new PluginManager();
 
 async function initializeBrain() {
+    // ... existing initialization code
     const apiKey = config.get('apiKey') || process.env.GOOGLE_AI_API_KEY;
     
     if (apiKey) {
@@ -48,6 +49,13 @@ function createWindow() {
         windowSize
     );
     const alwaysOnTop = config.get('alwaysOnTop') !== false;
+    const startOnBoot = config.get('startOnBoot') === true;
+
+    // Apply start on boot setting
+    app.setLoginItemSettings({
+        openAtLogin: startOnBoot,
+        path: app.getPath('exe') // Correct specialized path for packaged app
+    });
 
     mainWindow = new BrowserWindow({
         width: windowSize.width,
@@ -68,6 +76,26 @@ function createWindow() {
     });
 
     mainWindow.loadFile(path.join(__dirname, '../ui/index.html'));
+
+    // Create Context Menu (Right-Click)
+    const contextMenu = Menu.buildFromTemplate([
+        { label: 'Echo AI Agent', enabled: false },
+        { type: 'separator' },
+        { 
+            label: 'Hide (Ctrl+Shift+E)', 
+            click: () => mainWindow.hide() 
+        },
+        { type: 'separator' },
+        { 
+            label: 'Quit Echo', 
+            click: () => app.quit() 
+        }
+    ]);
+
+    // Attach context menu to window
+    mainWindow.webContents.on('context-menu', (e, params) => {
+        contextMenu.popup(mainWindow, params.x, params.y);
+    });
 
     // Register global hotkey
     const hotkey = config.get('hotkey') || 'CommandOrControl+Shift+E';

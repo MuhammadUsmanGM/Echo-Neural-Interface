@@ -1,42 +1,30 @@
 const chalk = require('chalk');
-const ora = require('ora');
 
-const spinner = ora({
-  text: 'Setting up Echo AI Agent...',
-  color: 'cyan'
-});
-
-async function postInstall() {
-  try {
-    spinner.start();
+function postInstall() {
+    console.log('\n');
+    console.log(chalk.cyan('╔═══════════════════════════════════════════════════════════════╗'));
+    console.log(chalk.cyan('║                                                               ║'));
+    console.log(chalk.cyan('║') + chalk.bold.white('                    ECHO AI AGENT                          ') + chalk.cyan('║'));
+    console.log(chalk.cyan('║') + chalk.gray('              Premium Desktop Assistant v1.0.0             ') + chalk.cyan('║'));
+    console.log(chalk.cyan('║                                                               ║'));
+    console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════════╝'));
+    console.log('\n');
     
-    // Simulate setup tasks
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log(chalk.green.bold('  ✓ Installation Successful!'));
+    console.log(chalk.gray('  Welcome to the future of desktop automation.'));
     
-    spinner.succeed('Echo AI Agent installed successfully!');
+    console.log('\n' + chalk.yellow.bold('  👉 NEXT STEP: SETUP'));
+    console.log(chalk.white('  To configure your API key, theme, and startup preferences, run:'));
+    console.log('\n      ' + chalk.bgCyan.black.bold(' echo setup ') + '\n');
     
-    console.log(chalk.cyan('\n╔═══════════════════════════════════════╗'));
-    console.log(chalk.cyan('║') + '     ' + chalk.bold.white('ECHO AI AGENT') + '                ' + chalk.cyan('║'));
-    console.log(chalk.cyan('║') + '     ' + chalk.gray('Your JARVIS-like Assistant') + '      ' + chalk.cyan('║'));
-    console.log(chalk.cyan('╚═══════════════════════════════════════╝\n'));
+    console.log(chalk.white('  Then launch Echo with:'));
+    console.log('      ' + chalk.cyan('echo start') + '\n');
     
-    console.log(chalk.green('✓ Installation complete!\n'));
-    console.log(chalk.bold('Quick Start:\n'));
-    console.log('  1. Run setup wizard:  ' + chalk.cyan('echo setup'));
-    console.log('  2. Launch Echo:       ' + chalk.cyan('echo start'));
-    console.log('  3. Get help:          ' + chalk.cyan('echo --help\n'));
-    
-    console.log(chalk.gray('Need an API key? Get one free at: ') + chalk.blue('https://aistudio.google.com/\n'));
-    
-  } catch (error) {
-    spinner.fail('Installation encountered an issue');
-    console.error(chalk.red(error.message));
-  }
+    console.log(chalk.gray('  Need help? Run ') + chalk.white('echo --help') + '\n');
 }
 
-// Only run if called directly (not when required as module)
 if (require.main === module) {
-  postInstall();
+    postInstall();
 }
 
 module.exports = postInstall;

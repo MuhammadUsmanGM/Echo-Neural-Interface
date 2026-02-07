@@ -65,6 +65,12 @@ async function run() {
       name: 'alwaysOnTop',
       message: 'Keep Echo always on top of other windows?',
       default: true
+    },
+    {
+      type: 'confirm',
+      name: 'startOnBoot',
+      message: 'Start Echo automatically when you log in?',
+      default: false
     }
   ]);
 
@@ -74,6 +80,7 @@ async function run() {
   config.set('position', answers.position);
   config.set('size', answers.size);
   config.set('alwaysOnTop', answers.alwaysOnTop);
+  config.set('startOnBoot', answers.startOnBoot);
   config.set('configured', true);
 
   // Create/update .env file
