@@ -1,32 +1,62 @@
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electron');
 const path = require('path');
 const GeminiBrain = require('../services/gemini');
 const SystemActions = require('../services/system');
+const ConfigManager = require('../scripts/config-manager');
+const PluginManager = require('../scripts/plugin-manager');
 require('dotenv').config();
 
 let mainWindow;
 let brain;
+const config = new ConfigManager();
+const pluginManager = new PluginManager();
 
-// Initialize the brain if API key is present
-if (process.env.GOOGLE_AI_API_KEY) {
-    brain = new GeminiBrain(process.env.GOOGLE_AI_API_KEY);
+async function initializeBrain() {
+    const apiKey = config.get('apiKey') || process.env.GOOGLE_AI_API_KEY;
+    
+    if (apiKey) {
+        // Load plugins first
+        await pluginManager.loadPlugins();
+        
+        // Convert plugin commands to Gemini tool format
+        const pluginTools = pluginManager.listPlugins().filter(p => p.enabled).flatMap(p => {
+            const plugin = pluginManager.plugins.get(p.name);
+            return Object.keys(plugin.commands).map(cmdName => ({
+                name: cmdName, // Command name matches function name
+                description: plugin.commandDescriptions?.[cmdName] || `Execute ${cmdName} command`,
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        args: { type: "STRING", description: "Arguments for the command" }
+                    }
+                }
+            }));
+        });
+
+        brain = new GeminiBrain(apiKey, pluginTools);
+    }
 }
 
 function createWindow() {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
     
-    // Transparent, always-on-top window
-    const windowWidth = 350;
-    const windowHeight = 450;
+    // Get user preferences
+    const windowSize = config.getWindowSize(config.get('size') || 'medium');
+    const position = config.getWindowPosition(
+        config.get('position') || 'bottom-right',
+        { width, height },
+        windowSize
+    );
+    const alwaysOnTop = config.get('alwaysOnTop') !== false;
 
     mainWindow = new BrowserWindow({
-        width: windowWidth,
-        height: windowHeight,
-        x: width - windowWidth - 20,
-        y: height - windowHeight - 20,
+        width: windowSize.width,
+        height: windowSize.height,
+        x: position.x,
+        y: position.y,
         frame: false,
         transparent: true,
-        alwaysOnTop: true,
+        alwaysOnTop: alwaysOnTop,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
@@ -38,13 +68,52 @@ function createWindow() {
     });
 
     mainWindow.loadFile(path.join(__dirname, '../ui/index.html'));
+
+    // Register global hotkey
+    const hotkey = config.get('hotkey') || 'CommandOrControl+Shift+E';
+    globalShortcut.register(hotkey, () => {
+        if (mainWindow) {
+            if (mainWindow.isVisible()) {
+                mainWindow.hide();
+            } else {
+                mainWindow.show();
+                mainWindow.focus();
+            }
+        }
+    });
+
+    // Send theme configuration to renderer
+    mainWindow.webContents.on('did-finish-load', () => {
+        const theme = config.get('theme') || 'cyan';
+        const themeColors = config.getThemeColors(theme);
+        mainWindow.webContents.send('apply-theme', themeColors);
+    });
 }
 
-app.whenReady().then(createWindow);
+// Global error handlers
+process.on('uncaughtException', (error) => {
+    console.error('Critical Error:', error);
+    // Optionally show a dialog to the user
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Initialize system
+app.whenReady().then(async () => {
+    await initializeBrain();
+    createWindow();
+});
+
+app.on('will-quit', () => {
+    // Unregister all shortcuts
+    globalShortcut.unregisterAll();
+});
 
 // Handle voice/text commands from the UI
 ipcMain.handle('process-input', async (event, text) => {
-    if (!brain) return { success: false, text: "API Key missing. Please set it in .env" };
+    if (!brain) return { success: false, text: "API Key missing. Please run 'echo setup' first." };
     
     try {
         const response = await brain.processCommand(text);
@@ -53,16 +122,43 @@ ipcMain.handle('process-input', async (event, text) => {
             // Execute the system action
             let result;
             const cmd = response.command.toLowerCase();
-            const argsStr = response.args.join(' ');
+            const argsStr = Array.isArray(response.args) ? response.args.join(' ') : response.args;
 
+            // Enhanced command routing
             if (cmd.includes('chrome') || cmd.includes('search') || cmd.includes('web')) {
                 result = await SystemActions.searchWeb(argsStr || text);
             } else if (cmd.includes('mkdir') || cmd.includes('folder')) {
                 result = await SystemActions.createFolder(argsStr || "New Folder");
+            } else if (cmd.includes('screenshot')) {
+                result = await SystemActions.takeScreenshot();
+            } else if (cmd.includes('system') || cmd.includes('info')) {
+                result = SystemActions.getSystemInfo();
+            } else if (cmd.includes('time') || cmd.includes('date')) {
+                result = SystemActions.getDateTime();
+            } else if (cmd.includes('list') || cmd.includes('files')) {
+                result = await SystemActions.listFiles(argsStr);
+            } else if (cmd.includes('copy')) {
+                const [source, dest] = argsStr.split(' to ');
+                result = await SystemActions.copyFile(source, dest);
+            } else if (cmd.includes('delete')) {
+                result = await SystemActions.deleteFile(argsStr);
+            } else if (cmd.includes('url') || cmd.includes('open')) {
+                result = await SystemActions.openUrl(argsStr);
             } else {
                 result = await SystemActions.openApp(cmd);
             }
+            
             return { success: true, text: response.text || "Action completed, sir.", action: response.command };
+        
+        } else if (response.type === 'plugin_action') {
+            // Execute plugin command
+            const result = await pluginManager.executeCommand(response.command, response.args);
+            
+            if (result.success) {
+                return { success: true, text: result.result.message || "Plugin executed successfully.", action: response.command };
+            } else {
+                return { success: false, text: `Plugin error: ${result.error}` };
+            }
         }
         
         return { success: true, text: response.text };
@@ -71,3 +167,12 @@ ipcMain.handle('process-input', async (event, text) => {
         return { success: false, text: "I encountered an error processing that, sir." };
     }
 });
+
+// Get configuration
+ipcMain.handle('get-config', async () => {
+    return {
+        theme: config.get('theme') || 'cyan',
+        themeColors: config.getThemeColors(config.get('theme') || 'cyan')
+    };
+});
+

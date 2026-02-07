@@ -3,6 +3,12 @@ const blobsContainer = document.querySelector('.blobs-container');
 const blobs = document.querySelectorAll('.blob');
 const innerSphere = document.querySelector('.sphere-inner');
 
+// Load and apply theme
+window.electronAPI.onApplyTheme((themeColors) => {
+    document.documentElement.style.setProperty('--core-color', themeColors.core);
+    document.documentElement.style.setProperty('--glow-color', themeColors.glow);
+});
+
 let audioContext;
 let analyser;
 let microphone;
@@ -49,6 +55,7 @@ async function handleVoiceCommand(text) {
     } catch (err) {
         console.error("Processing Error:", err);
         statusText.innerText = "ERROR IN BRAIN";
+        speakResponse("I'm sorry sir, I encountered a critical error in my processing pathways.");
     } finally {
         blobsContainer.classList.remove('processing');
     }
