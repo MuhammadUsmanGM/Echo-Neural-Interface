@@ -3,37 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Echo AI</title>
+    <title>Echo AI Agent</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="echo-container">
-        <div class="oracle-wrapper">
-            <!-- Wavy Organic Core -->
-            <div class="blobs-container">
-                <div class="blob blob-1"></div>
-                <div class="blob blob-2"></div>
-                <div class="blob blob-3"></div>
-                <div class="sphere-inner"></div>
-            </div>
+    <div class="echo-container" role="main" aria-label="Echo AI Interface">
+        <div class="oracle-wrapper" role="button" aria-label="Activate Voice Command" tabindex="0">
+            <!-- 3D Particle Canvas -->
+            <canvas id="particle-canvas"></canvas>
             
-            <!-- Rotating Rings -->
-            <div class="ring ring-1"></div>
-            <div class="ring ring-2"></div>
-            
-            <!-- SVG Filter for the "Liquid/Wave" effect -->
-            <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="display:none;">
-              <defs>
-                <filter id="goo">
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="15" result="blur" />
-                  <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
-                  <feBlend in="SourceGraphic" in2="goo" />
-                </filter>
-              </defs>
+            <!-- HUD Overlay (SVG) -->
+            <svg class="hud-ring" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="100" cy="100" r="90" class="hud-circle-thin" />
+                <path d="M 100 5 A 95 95 0 0 1 195 100" class="hud-arc-dashed" />
+                <path d="M 100 195 A 95 95 0 0 1 5 100" class="hud-arc-dashed-reverse" />
+                <rect x="98" y="2" width="4" height="10" class="hud-notch-top" />
+                <rect x="98" y="188" width="4" height="10" class="hud-notch-bottom" />
             </svg>
         </div>
         
-        <div id="status-text" class="status-text">LISTENING...</div>
+        <div id="status-text" class="status-text" aria-live="polite">LISTENING...</div>
     </div>
     <script src="renderer.js"></script>
 </body>
