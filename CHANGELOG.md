@@ -5,6 +5,16 @@ All notable changes to Echo AI Agent will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-02-07
+
+### 🛡️ Security & Reliability Updates
+- **Security**: Replaced `eval()` in plugins with safer `Function` constructor validation.
+- **Security**: Added input sanitization for system commands to prevent injection attacks.
+- **Architecture**: Implemented `electron-log` for robust error logging.
+- **DX**: Added ESLint, Prettier, and Jest configuration for better development practices.
+- **CI/CD**: Added GitHub Actions workflow for automated testing and linting.
+- **UX**: Improved accessibility (ARIA labels) and added specific help instructions to the AI.
+
 ## [1.0.0] - 2026-02-07
 
 ### 🎉 Initial Release
