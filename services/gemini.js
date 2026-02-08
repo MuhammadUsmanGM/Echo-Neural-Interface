@@ -32,6 +32,7 @@ class GeminiBrain {
                                "You also have access to external plugins if available. " +
                                "Always refer to the user as 'Sir' (or their preferred title) unless told otherwise. " +
                                "Keep your spoken responses concise, elegant, and ready for text-to-speech. " +
+                               "If a user asks for 'help' or 'what can you do', list your capabilities briefly: creating folders, searching the web, system info, taking screenshots, and any loaded plugins. " +
                                "If a user asks for something outside your direct control, check if a plugin tool is available."
         });
     }

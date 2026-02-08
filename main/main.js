@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut, Menu, Tray } = require('electron');
 const path = require('path');
 const GeminiBrain = require('../services/gemini');
 const SystemActions = require('../services/system');
 const ConfigManager = require('../scripts/config-manager');
 const PluginManager = require('../scripts/plugin-manager');
+const { CHANNELS, THEMES, COMMANDS, MESSAGES } = require('../utils/constants');
 require('dotenv').config();
 
 let mainWindow;

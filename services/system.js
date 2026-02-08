@@ -6,9 +6,15 @@ const path = require('path');
 const platform = os.platform();
 
 const SystemActions = {
-    // Cross-platform app launcher
+    // Cross-platform app launcher with sanitization
     openApp: (appName) => {
         return new Promise((resolve) => {
+            // Security: Sanitize input to prevent command injection
+            if (/;|&|\||`|\$|\(|\)|<|>|\\/.test(appName)) {
+                console.warn('Security Alert: Blocked potentially dangerous character in openApp:', appName);
+                return resolve({ success: false, error: 'Security Alert: Invalid characters in application name.' });
+            }
+
             let command;
             
             if (platform === 'win32') {
@@ -27,9 +33,10 @@ const SystemActions = {
         });
     },
 
-    // Cross-platform web search
+    // Cross-platform web search with URL safety
     searchWeb: (query) => {
-        const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+        const sanitizedQuery = encodeURIComponent(query);
+        const url = `https://www.google.com/search?q=${sanitizedQuery}`;
         return new Promise((resolve) => {
             let command;
             
