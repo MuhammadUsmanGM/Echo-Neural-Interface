@@ -37,8 +37,18 @@ module.exports = {
          */
         calculate: async function(args) {
             try {
-                // Simple calculator (be careful with eval in production!)
-                const result = eval(args);
+                // Security: Only allow numbers and basic math operators
+                // This prevents code injection attacks (e.g., "calculate console.log(process.env)")
+                if (!/^[0-9+\-*/().\s]+$/.test(args)) {
+                    return {
+                        success: false,
+                        message: 'Security Alert: Invalid characters detected in calculation.'
+                    };
+                }
+
+                // Safe to evaluate now
+                const result = new Function('return ' + args)();
+                
                 return {
                     success: true,
                     message: `The result is ${result}`
@@ -46,7 +56,7 @@ module.exports = {
             } catch (error) {
                 return {
                     success: false,
-                    message: 'Invalid calculation'
+                    message: 'Could not calculate that equation.'
                 };
             }
         },
