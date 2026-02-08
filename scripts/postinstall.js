@@ -5,7 +5,7 @@ function postInstall() {
     console.log(chalk.cyan('╔═══════════════════════════════════════════════════════════════╗'));
     console.log(chalk.cyan('║                                                               ║'));
     console.log(chalk.cyan('║') + chalk.bold.white('                    ECHO AI AGENT                          ') + chalk.cyan('║'));
-    console.log(chalk.cyan('║') + chalk.gray('              Premium Desktop Assistant v1.0.0             ') + chalk.cyan('║'));
+    console.log(chalk.cyan('║') + chalk.gray('              Premium Desktop Assistant v1.0.5             ') + chalk.cyan('║'));
     console.log(chalk.cyan('║                                                               ║'));
     console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════════╝'));
     console.log('\n');
