@@ -308,7 +308,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 - 🐛 **Bug Reports:** [GitHub Issues](https://github.com/MuhammadUsmanGM/Echo/issues)
 - 💡 **Feature Requests:** [GitHub Discussions](https://github.com/MuhammadUsmanGM/Echo/discussions)
-- 📧 **Contact:** [Your Email]
+- 📧 **Contact:** mu.ai.dev@gmail.com
 
 ---
 
