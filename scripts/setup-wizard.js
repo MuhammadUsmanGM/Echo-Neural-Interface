@@ -14,7 +14,7 @@ async function run() {
     {
       type: 'input',
       name: 'apiKey',
-      message: 'Enter your Google Gemini API Key:',
+      message: 'Enter your Google Gemini API Key (Get one at https://aistudio.google.com/):',
       validate: (input) => {
         if (!input || input.trim().length === 0) {
           return 'API Key is required. Get one from https://aistudio.google.com/';
@@ -71,8 +71,72 @@ async function run() {
       name: 'startOnBoot',
       message: 'Start Echo automatically when you log in?',
       default: false
+    },
+    {
+      type: 'list',
+      name: 'voiceProvider',
+      message: 'How would you like to handle voice recognition?',
+      choices: [
+        { name: 'Browser Built-in (Fastest, requires online)', value: 'browser' },
+        { name: 'Whisper (Local, High Accuracy, requires Python)', value: 'whisper' }
+      ],
+      default: 'browser'
     }
   ]);
+
+  // Whisper Configuration Logic
+  if (answers.voiceProvider === 'whisper') {
+    const { execSync } = require('child_process');
+    let hasWhisper = false;
+    
+    try {
+        // Check if whisper is installed
+        execSync('whisper --help', { stdio: 'ignore' });
+        hasWhisper = true;
+    } catch (e) {
+        hasWhisper = false;
+    }
+
+    if (!hasWhisper) {
+        console.log(chalk.yellow('\n⚠️  Whisper not found on your system.'));
+        const installWhisper = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'install',
+                message: 'Do you want to download and install OpenAI Whisper via pip now?',
+                default: true
+            }
+        ]);
+
+        if (installWhisper.install) {
+            console.log(chalk.cyan('\n⬇️  Installing OpenAI Whisper... (This may take a moment)'));
+            try {
+                execSync('pip install openai-whisper', { stdio: 'inherit' });
+                console.log(chalk.green('✓ Whisper installed successfully!'));
+                hasWhisper = true;
+            } catch (err) {
+                console.log(chalk.red('❌ Failed to install Whisper. Please ensure Python and pip are installed and in your PATH.'));
+                console.log(chalk.gray('Falling back to Browser Voice API.'));
+                answers.voiceProvider = 'browser';
+            }
+        } else {
+            console.log(chalk.gray('Falling back to Browser Voice API.'));
+            answers.voiceProvider = 'browser';
+        }
+    }
+
+    if (hasWhisper) {
+        const whisperStartup = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'startup',
+                message: 'Do you want Whisper to start automatically when Echo starts?',
+                default: true
+            }
+        ]);
+        config.set('whisperStartup', whisperStartup.startup);
+    }
+  }
 
   // Save configuration
   config.set('apiKey', answers.apiKey);
@@ -81,6 +145,7 @@ async function run() {
   config.set('size', answers.size);
   config.set('alwaysOnTop', answers.alwaysOnTop);
   config.set('startOnBoot', answers.startOnBoot);
+  config.set('voiceProvider', answers.voiceProvider);
   config.set('configured', true);
 
   // Create/update .env file
