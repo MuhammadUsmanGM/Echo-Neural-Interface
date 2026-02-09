@@ -102,7 +102,6 @@ Before submitting a PR:
 
 ### High Priority
 
-- 🔌 **Plugin System** - Allow users to extend Echo with custom commands
 - 🧪 **Test Coverage** - Add unit and integration tests
 - 🌍 **Internationalization** - Support multiple languages
 - 📱 **Mobile App** - Companion app for mobile devices
@@ -201,22 +200,37 @@ getThemeColors(themeName) {
 4. Test the theme thoroughly
 5. Submit a PR with screenshots
 
-## 🔌 Creating a Plugin (Future)
+## 🔌 Creating a Plugin
 
-When the plugin system is implemented, plugins will follow this structure:
+The plugin system is now live! Plugins are simply `.js` files located in the `plugins/` directory:
 
 ```javascript
 module.exports = {
     name: 'my-plugin',
     version: '1.0.0',
+    description: 'A brief description of your plugin',
+    author: 'Your Name',
+    
+    // Command definitions
     commands: {
         'my-command': async (args) => {
-            // Your command logic
-            return { success: true, message: 'Done!' };
+            // Your command logic here
+            return { 
+                success: true, 
+                message: 'Command executed successfully!' 
+            };
         }
+    },
+    
+    // Help descriptions
+    commandDescriptions: {
+        'my-command': 'A description of what my-command does'
     }
 };
 ```
+
+After adding your plugin, enable it using:
+`echo plugins --enable my-plugin`
 
 ## 📋 Checklist Before Submitting PR
 

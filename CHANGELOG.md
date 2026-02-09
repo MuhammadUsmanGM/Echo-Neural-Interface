@@ -5,6 +5,17 @@ All notable changes to Echo AI Agent will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-02-09
+
+### 💎 The Emerald Update
+- **Branding**: Complete overhaul to the "Emerald Green" premium identity.
+- **Voice Intelligence**: Integrated **Whisper Cloud** and **Whisper Local** (Private STT) with automated setup.
+- **UI Architecture**: Enhanced Holographic HUD with neural connection animations and frequency-band audio visualization.
+- **Documentation**: Launched the React-based **Documentation Hub** (`echo docs`) with advanced system guides.
+- **Intelligence**: Added multi-model support for **OpenAI**, **Anthropic**, and **DeepSeek**.
+- **Onboarding**: Re-engineered the `echo setup` wizard with automated application launch and startup management.
+- **System**: Implemented dynamic port management for the local documentation server.
+
 ## [1.0.5] - 2026-02-07
 
 ### 🛡️ Security & Reliability Updates
@@ -77,4 +88,4 @@ The first public release of Echo AI Agent, featuring a complete JARVIS-inspired 
 
 ---
 
-[1.0.0]: https://github.com/MuhammadUsmanGM/Echo/releases/tag/v1.0.0
+[1.0.0]: https://github.com/MuhammadUsmanGM/Echo-Neural-Interface/releases/tag/v1.0.0
