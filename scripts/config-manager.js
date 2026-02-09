@@ -10,14 +10,19 @@ class ConfigManager {
         theme: 'cyan',
         position: 'bottom-right',
         size: 'medium',
-        apiKey: null,
+        userName: 'User',
+        aiProvider: 'google',
+        model: 'gemini-2.0-flash-lite',
+        apiKeys: {},
         voice: 'auto',
         hotkey: 'CommandOrControl+Shift+E',
         alwaysOnTop: true,
         startOnBoot: false,
         voiceProvider: 'browser',
         whisperStartup: false,
-        plugins: []
+        memoryEnabled: true,
+        workflows: {},
+        plugins: ['example-plugin', 'productivity-plugin', 'system-control-plugin', 'workflow-plugin']
       }
     });
   }

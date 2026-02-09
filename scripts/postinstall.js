@@ -1,13 +1,11 @@
 const chalk = require('chalk');
 
+const { getLogo } = require('../utils/branding');
+
 function postInstall() {
     console.log('\n');
-    console.log(chalk.cyan('╔═══════════════════════════════════════════════════════════════╗'));
-    console.log(chalk.cyan('║                                                               ║'));
-    console.log(chalk.cyan('║') + chalk.bold.white('                    ECHO AI AGENT                          ') + chalk.cyan('║'));
-    console.log(chalk.cyan('║') + chalk.gray('              Premium Desktop Assistant v1.0.5             ') + chalk.cyan('║'));
-    console.log(chalk.cyan('║                                                               ║'));
-    console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════════╝'));
+    console.log(getLogo());
+    console.log(chalk.gray('              Premium Desktop Assistant v1.0.5             '));
     console.log('\n');
     
     console.log(chalk.green.bold('  ✓ Installation Successful!'));

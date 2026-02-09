@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, screen, globalShortcut, Menu, Tray } = require('electron');
 const path = require('path');
 const GeminiBrain = require('../services/gemini');
+const WhisperService = require('../services/whisper');
 const SystemActions = require('../services/system');
 const ConfigManager = require('../scripts/config-manager');
 const PluginManager = require('../scripts/plugin-manager');
@@ -9,12 +10,32 @@ require('dotenv').config();
 
 let mainWindow;
 let brain;
+let whisper;
 const config = new ConfigManager();
 const pluginManager = new PluginManager();
 
 async function initializeBrain() {
-    // ... existing initialization code
-    const apiKey = config.get('apiKey') || process.env.GOOGLE_AI_API_KEY;
+    const provider = config.get('aiProvider') || 'google';
+    const apiKeys = config.get('apiKeys') || {};
+    const apiKey = apiKeys[provider] || process.env.GOOGLE_AI_API_KEY;
+    const model = config.get('model') || 'gemini-2.0-flash-lite';
+    
+    // Initialize Whisper Service based on provider
+    const voiceProvider = config.get('voiceProvider') || 'browser';
+    if (voiceProvider === 'whisper') {
+        if (apiKeys.openai) {
+            whisper = new WhisperService({ 
+                mode: 'cloud', 
+                apiKey: apiKeys.openai 
+            });
+        }
+    } else if (voiceProvider === 'whisper-local') {
+        whisper = new WhisperService({ 
+            mode: 'local',
+            localPath: config.get('localWhisperPath'),
+            modelPath: config.get('localWhisperModel')
+        });
+    }
     
     if (apiKey) {
         // Load plugins first
@@ -24,7 +45,7 @@ async function initializeBrain() {
         const pluginTools = pluginManager.listPlugins().filter(p => p.enabled).flatMap(p => {
             const plugin = pluginManager.plugins.get(p.name);
             return Object.keys(plugin.commands).map(cmdName => ({
-                name: cmdName, // Command name matches function name
+                name: cmdName,
                 description: plugin.commandDescriptions?.[cmdName] || `Execute ${cmdName} command`,
                 parameters: {
                     type: "OBJECT",
@@ -35,7 +56,7 @@ async function initializeBrain() {
             }));
         });
 
-        brain = new GeminiBrain(apiKey, pluginTools);
+        brain = new GeminiBrain(apiKey, pluginTools, model);
     }
 }
 
@@ -203,5 +224,30 @@ ipcMain.handle('get-config', async () => {
         theme: config.get('theme') || 'cyan',
         themeColors: config.getThemeColors(config.get('theme') || 'cyan')
     };
+});
+
+ipcMain.handle('get-voice-config', async () => {
+    return {
+        provider: config.get('voiceProvider') || 'browser'
+    };
+});
+
+ipcMain.handle('transcribe-audio', async (event, audioBuffer) => {
+    if (!whisper) {
+        // Fallback to re-init if whisper was missing
+        const apiKeys = config.get('apiKeys') || {};
+        if (apiKeys.openai) {
+            whisper = new WhisperService(apiKeys.openai);
+        } else {
+            return { success: false, error: "OpenAI API Key missing for Whisper." };
+        }
+    }
+
+    try {
+        const text = await whisper.transcribe(Buffer.from(audioBuffer));
+        return { success: true, text };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
 });
 

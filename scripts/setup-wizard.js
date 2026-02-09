@@ -3,160 +3,165 @@ const chalk = require('chalk');
 const fs = require('fs');
 const path = require('path');
 const ConfigManager = require('./config-manager');
+const AI_MODELS = require('./ai-models');
+
+const { printLogo } = require('../utils/branding');
 
 const config = new ConfigManager();
 
 async function run() {
-  console.log(chalk.cyan.bold('\n🔧 Echo Setup Wizard\n'));
-  console.log(chalk.gray('Let\'s configure your AI assistant...\n'));
+  printLogo();
+  console.log(chalk.gray('  Configure your AI brain and start your journey...\n'));
 
-  const answers = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'apiKey',
-      message: 'Enter your Google Gemini API Key (Get one at https://aistudio.google.com/):',
-      validate: (input) => {
-        if (!input || input.trim().length === 0) {
-          return 'API Key is required. Get one from https://aistudio.google.com/';
-        }
-        return true;
-      }
-    },
+  // 1. Select AI Provider
+  const { provider } = await inquirer.prompt([
     {
       type: 'list',
-      name: 'theme',
-      message: 'Choose your theme:',
+      name: 'provider',
+      message: 'Select your AI Provider:',
       choices: [
-        { name: chalk.cyan('● Cyan (Classic JARVIS)'), value: 'cyan' },
-        { name: chalk.hex('#a855f7')('● Purple (Royal)'), value: 'purple' },
-        { name: chalk.green('● Green (Matrix)'), value: 'green' },
-        { name: chalk.hex('#ffd700')('● Gold (Iron Man)'), value: 'gold' },
-        { name: chalk.red('● Red (Cyberpunk)'), value: 'red' },
-        { name: chalk.blue('● Blue (Ocean)'), value: 'blue' }
-      ],
-      default: 'cyan'
-    },
-    {
-      type: 'list',
-      name: 'position',
-      message: 'Where should Echo appear on your screen?',
-      choices: [
-        { name: 'Bottom Right (Recommended)', value: 'bottom-right' },
-        { name: 'Bottom Left', value: 'bottom-left' },
-        { name: 'Top Right', value: 'top-right' },
-        { name: 'Top Left', value: 'top-left' },
-        { name: 'Center', value: 'center' }
-      ],
-      default: 'bottom-right'
-    },
-    {
-      type: 'list',
-      name: 'size',
-      message: 'Choose window size:',
-      choices: [
-        { name: 'Small (250x350)', value: 'small' },
-        { name: 'Medium (350x450) - Recommended', value: 'medium' },
-        { name: 'Large (450x550)', value: 'large' }
-      ],
-      default: 'medium'
-    },
-    {
-      type: 'confirm',
-      name: 'alwaysOnTop',
-      message: 'Keep Echo always on top of other windows?',
-      default: true
-    },
-    {
-      type: 'confirm',
-      name: 'startOnBoot',
-      message: 'Start Echo automatically when you log in?',
-      default: false
-    },
-    {
-      type: 'list',
-      name: 'voiceProvider',
-      message: 'How would you like to handle voice recognition?',
-      choices: [
-        { name: 'Browser Built-in (Fastest, requires online)', value: 'browser' },
-        { name: 'Whisper (Local, High Accuracy, requires Python)', value: 'whisper' }
-      ],
-      default: 'browser'
+        { name: 'Google Gemini (Free tier available)', value: 'google' },
+        { name: 'OpenAI (GPT-4o)', value: 'openai' },
+        { name: 'Anthropic (Claude)', value: 'anthropic' },
+        { name: 'DeepSeek (Affordable & Powerful)', value: 'deepseek' }
+      ]
     }
   ]);
 
-  // Whisper Configuration Logic
-  if (answers.voiceProvider === 'whisper') {
-    const { execSync } = require('child_process');
-    let hasWhisper = false;
-    
+  // 2. Enter API Key
+  const { apiKey } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'apiKey',
+      message: `Enter your ${AI_MODELS[provider].name} API Key:`,
+      validate: (input) => input.trim() ? true : 'API Key is required.'
+    }
+  ]);
+
+  // 3. Personalization
+  const { userName } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'userName',
+      message: 'What should Echo call you?',
+      default: config.get('userName') || 'Friend'
+    }
+  ]);
+
+  // 4. Select Voice Engine
+  console.log(chalk.cyan('\n🎙️  Voice Intelligence'));
+  const { voiceProvider } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'voiceProvider',
+      message: 'Select Voice Recognition Engine:',
+      choices: [
+        { name: '🌐 Browser API (Native, Fast, Free)', value: 'browser' },
+        { name: '☁️  Whisper Cloud (Top Accuracy, OpenAI Key required)', value: 'whisper' },
+        { name: '🏠 Whisper Local (Privacy, One-time Setup)', value: 'whisper-local' }
+      ],
+      default: config.get('voiceProvider') || 'browser'
+    }
+  ]);
+
+  // 5. Startup Preference
+  const { startOnBoot } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'startOnBoot',
+      message: 'Launch Echo automatically on system startup?',
+      default: false
+    }
+  ]);
+
+  const apiKeys = config.get('apiKeys') || {};
+  apiKeys[provider] = apiKey;
+
+  // Handle Whisper Cloud specific requirements
+  if (voiceProvider === 'whisper' && !apiKeys.openai) {
+    console.log(chalk.yellow('\n⚠️  Whisper Cloud requires an OpenAI API key.'));
+    const { whisperKey } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'whisperKey',
+        message: 'Enter your OpenAI API Key:',
+        validate: (input) => input.trim() ? true : 'Key is required for Whisper.'
+      }
+    ]);
+    apiKeys.openai = whisperKey;
+  }
+
+  // Save AI & User Configuration
+  config.set('apiKeys', apiKeys);
+  config.set('aiProvider', provider);
+  config.set('model', AI_MODELS[provider].defaultModel);
+  config.set('userName', userName);
+  config.set('voiceProvider', voiceProvider);
+  config.set('startOnBoot', startOnBoot);
+  config.set('configured', true);
+
+  // Auto-enable core plugins
+  const PluginManager = require('./plugin-manager');
+  const pm = new PluginManager();
+  const allPlugins = pm.listPlugins();
+  
+  if (allPlugins.length > 0) {
+    const defaults = ['example-plugin', 'productivity-plugin', 'system-control-plugin', 'workflow-plugin'];
+    const toEnable = defaults.filter(d => allPlugins.some(p => p.name === d));
+    config.set('plugins', toEnable);
+  }
+
+  // Create/update .env for backward compatibility with Gemini service
+  if (provider === 'google') {
+    const envPath = path.join(__dirname, '..', '.env');
+    fs.writeFileSync(envPath, `GOOGLE_AI_API_KEY=${apiKey}\n`);
+  }
+
+  console.log(chalk.green('\n✓ Echo configured successfully!'));
+  console.log(chalk.white(`  Brain Provider: ${AI_MODELS[provider].name}`));
+  console.log(chalk.white(`  Voice Engine:   ${voiceProvider.charAt(0).toUpperCase() + voiceProvider.slice(1)}`));
+  console.log(chalk.white(`  Start on Boot:  ${startOnBoot ? 'Enabled' : 'Disabled'}`));
+  
+  console.log(chalk.gray('\nFor themes, voice settings, and workflows, run:'));
+  console.log(chalk.cyan('  echo config'));
+  console.log(chalk.gray(`Your Echo awaits, ${userName}.\n`));
+
+  // Final Action: Launch everything!
+  const { spawn } = require('child_process');
+  
+  // 3. Setup Local Whisper if selected
+  if (voiceProvider === 'whisper-local') {
     try {
-        // Check if whisper is installed
-        execSync('whisper --help', { stdio: 'ignore' });
-        hasWhisper = true;
+      const { setup: setupWhisper } = require('./whisper-setup');
+      console.log(chalk.yellow('🏠 Initializing Local Whisper environment...'));
+      await setupWhisper();
     } catch (e) {
-        hasWhisper = false;
-    }
-
-    if (!hasWhisper) {
-        console.log(chalk.yellow('\n⚠️  Whisper not found on your system.'));
-        const installWhisper = await inquirer.prompt([
-            {
-                type: 'confirm',
-                name: 'install',
-                message: 'Do you want to download and install OpenAI Whisper via pip now?',
-                default: true
-            }
-        ]);
-
-        if (installWhisper.install) {
-            console.log(chalk.cyan('\n⬇️  Installing OpenAI Whisper... (This may take a moment)'));
-            try {
-                execSync('pip install openai-whisper', { stdio: 'inherit' });
-                console.log(chalk.green('✓ Whisper installed successfully!'));
-                hasWhisper = true;
-            } catch (err) {
-                console.log(chalk.red('❌ Failed to install Whisper. Please ensure Python and pip are installed and in your PATH.'));
-                console.log(chalk.gray('Falling back to Browser Voice API.'));
-                answers.voiceProvider = 'browser';
-            }
-        } else {
-            console.log(chalk.gray('Falling back to Browser Voice API.'));
-            answers.voiceProvider = 'browser';
-        }
-    }
-
-    if (hasWhisper) {
-        const whisperStartup = await inquirer.prompt([
-            {
-                type: 'confirm',
-                name: 'startup',
-                message: 'Do you want Whisper to start automatically when Echo starts?',
-                default: true
-            }
-        ]);
-        config.set('whisperStartup', whisperStartup.startup);
+      console.log(chalk.red('❌ Local Whisper setup failed. Please run manually: echo startup'));
     }
   }
 
-  // Save configuration
-  config.set('apiKey', answers.apiKey);
-  config.set('theme', answers.theme);
-  config.set('position', answers.position);
-  config.set('size', answers.size);
-  config.set('alwaysOnTop', answers.alwaysOnTop);
-  config.set('startOnBoot', answers.startOnBoot);
-  config.set('voiceProvider', answers.voiceProvider);
-  config.set('configured', true);
+  // 1. Launch Documentation Hub
+  try {
+    const { startServer } = require('./docs-server');
+    console.log(chalk.yellow('🚀 Launching Echo Documentation Hub...'));
+    startServer();
+  } catch (e) {}
 
-  // Create/update .env file
-  const envPath = path.join(__dirname, '..', '.env');
-  const envContent = `GOOGLE_AI_API_KEY=${answers.apiKey}\n`;
-  fs.writeFileSync(envPath, envContent);
-
-  console.log(chalk.green('\n✓ Configuration saved successfully!'));
-  console.log(chalk.gray('\nYou can change these settings anytime with:'));
-  console.log(chalk.cyan('  echo config --list'));
-  console.log(chalk.cyan('  echo setup\n'));
+  // 2. Launch Echo Agent UI (Electron)
+  setTimeout(() => {
+    console.log(chalk.cyan('✨ Initializing Holographic Neural Interface...'));
+    const electron = require('electron');
+    // Using electron from node_modules if possible, otherwise rely on system
+    const electronExecutable = process.platform === 'win32' ? 'electron.cmd' : 'electron';
+    const mainPath = path.join(__dirname, '..', 'main', 'main.js');
+    
+    const child = spawn(electronExecutable, [mainPath], {
+      detached: true,
+      stdio: 'ignore',
+      shell: true // Required for .cmd on Windows
+    });
+    child.unref();
+  }, 1500);
 }
 
 module.exports = { run };

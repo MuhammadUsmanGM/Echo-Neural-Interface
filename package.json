@@ -48,12 +48,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/MuhammadUsmanGM/Echo"
+    "url": "https://github.com/MuhammadUsmanGM/Echo-Neural-Interface"
   },
   "bugs": {
-    "url": "https://github.com/MuhammadUsmanGM/Echo/issues"
+    "url": "https://github.com/MuhammadUsmanGM/Echo-Neural-Interface/issues"
   },
-  "homepage": "https://github.com/MuhammadUsmanGM/Echo#readme",
+  "homepage": "https://github.com/MuhammadUsmanGM/Echo-Neural-Interface#readme",
   "author": "Muhammad Usman",
   "license": "MIT",
   "engines": {
