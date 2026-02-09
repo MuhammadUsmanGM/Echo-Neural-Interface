@@ -15,6 +15,8 @@ class ConfigManager {
         hotkey: 'CommandOrControl+Shift+E',
         alwaysOnTop: true,
         startOnBoot: false,
+        voiceProvider: 'browser',
+        whisperStartup: false,
         plugins: []
       }
     });
