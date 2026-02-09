@@ -19,6 +19,9 @@
             <!-- Core Hologram Canvas -->
             <canvas id="particle-canvas"></canvas>
             
+            <!-- NEW: Scan Line Effect -->
+            <div class="scan-line"></div>
+            
             <!-- Premium HUD Overlay -->
             <svg class="hud-ring" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
                 <!-- Outer decorative circles -->
@@ -47,25 +50,25 @@
                 <!-- Center crosshair -->
                 <circle cx="100" cy="100" r="3" class="hud-center-dot" />
             </svg>
-
-            <!-- Holographic Ripples (Radar Ping) -->
-            <div class="ripple-ring ring-1"></div>
-            <div class="ripple-ring ring-2"></div>
-            <div class="ripple-ring ring-3"></div>
-        </div>
-        
-        <!-- Premium Status Display -->
-        <div class="status-panel">
-            <div class="status-indicator">
-                <div class="pulse-dot"></div>
-                <span id="status-label">STANDBY</span>
-            </div>
-            <div id="status-text" class="status-text" aria-live="polite">
-                <span class="status-prefix">></span>
-                <span id="status-content">STANDBY</span>
-            </div>
-        </div>
-    </div>
-    <script src="renderer.js"></script>
+ 
+             <!-- Holographic Ripples (Radar Ping) -->
+             <div class="ripple-ring ring-1"></div>
+             <div class="ripple-ring ring-2"></div>
+             <div class="ripple-ring ring-3"></div>
+         </div>
+         
+         <!-- Premium Status Display -->
+         <div class="status-panel">
+             <div class="status-indicator">
+                 <div class="pulse-dot"></div>
+                 <span id="status-label">STANDBY</span>
+             </div>
+             <div id="status-text" class="status-text" aria-live="polite">
+                 <span class="status-prefix">></span>
+                 <span id="status-content">STANDBY</span>
+             </div>
+         </div>
+     </div>
+     <script src="renderer.js"></script>
 </body>
 </html>
