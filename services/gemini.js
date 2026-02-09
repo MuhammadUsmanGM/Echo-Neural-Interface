@@ -1,8 +1,12 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const MemoryManager = require("../scripts/memory-manager");
+const ConfigManager = require("../scripts/config-manager");
 
 class GeminiBrain {
-    constructor(apiKey, customTools = []) {
+    constructor(apiKey, customTools = [], modelName = "gemini-2.0-flash-lite") {
         this.genAI = new GoogleGenerativeAI(apiKey);
+        this.memory = new MemoryManager();
+        this.config = new ConfigManager();
         
         // Base system tools
         this.baseTools = [
@@ -24,28 +28,49 @@ class GeminiBrain {
         // Plugins should provide tools in Google Generative AI function declaration format
         this.allTools = [...this.baseTools, ...customTools];
 
+        const userName = this.config.get('userName') || 'Friend';
+
         this.model = this.genAI.getGenerativeModel({
-            model: "gemini-2.0-flash-lite",
-            systemInstruction: "You are Echo, a highly sophisticated, JARVIS-inspired AI agent. " +
-                               "Your personality is professional, slightly witty, and exceptionally helpful. " +
-                               "You have control over the user's system and can perform various tasks like opening apps, managing files, and searching the web. " +
-                               "You also have access to external plugins if available. " +
-                               "Always refer to the user as 'Sir' (or their preferred title) unless told otherwise. " +
-                               "Keep your spoken responses concise, elegant, and ready for text-to-speech. " +
-                               "If a user asks for 'help' or 'what can you do', list your capabilities briefly: creating folders, searching the web, system info, taking screenshots, and any loaded plugins. " +
-                               "If a user asks for something outside your direct control, check if a plugin tool is available."
+            model: modelName,
+            systemInstruction: `You are Echo, a highly sophisticated, human-like AI agent. ` +
+                               `Your personality is professional, slightly witty, and exceptionally helpful. ` +
+                               `The person you are assisting is named ${userName}. Use this name naturally in conversation. ` +
+                               `You have control over the user's system and can perform various tasks like opening apps, managing files, and searching the web. ` +
+                               `You also have access to external plugins if available. ` +
+                               `Keep your spoken responses concise, elegant, and ready for text-to-speech. ` +
+                               `If a user asks for 'help' or 'what can you do', list your capabilities briefly: creating folders, searching the web, system info, taking screenshots, and any loaded plugins. ` +
+                               `If a user asks for something outside your direct control, check if a plugin tool is available.`
         });
     }
 
     async processCommand(userInput) {
-        // Create chat with all available tools
+        const memoryEnabled = this.config.get('memoryEnabled') !== false;
+        let history = [];
+        
+        if (memoryEnabled) {
+            history = this.memory.getHistory();
+        }
+
+        // Create chat with all available tools and history
         const chat = this.model.startChat({
-            tools: [{ functionDeclarations: this.allTools }]
+            tools: [{ functionDeclarations: this.allTools }],
+            history: history
         });
 
         try {
+            // Save user message to memory
+            if (memoryEnabled) {
+                this.memory.saveMessage('user', userInput);
+            }
+
             const result = await chat.sendMessage(userInput);
             const response = result.response;
+            const responseText = response.text();
+            
+            // Save model response to memory
+            if (memoryEnabled) {
+                this.memory.saveMessage('model', responseText);
+            }
             
             // Handle tool calls
             const calls = response.functionCalls();
