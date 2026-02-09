@@ -8,6 +8,27 @@ const packageJson = require('../package.json');
 console.log(chalk.cyan.bold(`Preparing to publish Echo AI Agent v${packageJson.version}...\n`));
 
 try {
+    // 0. Build Documentation Hub (React App)
+    console.log(chalk.yellow('Building Documentation Hub (React + Vite)...'));
+    const docsPath = path.join(__dirname, '..', 'echo-docs');
+    if (fs.existsSync(docsPath)) {
+        try {
+            // Install dependencies if node_modules is missing, then build
+            if (!fs.existsSync(path.join(docsPath, 'node_modules'))) {
+                console.log(chalk.gray('  - Installing doc dependencies...'));
+                execSync('npm install', { cwd: docsPath, stdio: 'pipe' });
+            }
+            execSync('npm run build', { cwd: docsPath, stdio: 'pipe' });
+            console.log(chalk.green('✓ Documentation Hub built successfully.'));
+        } catch (e) {
+            console.error(chalk.red('❌ Error: Failed to build Documentation Hub. Please build manually and try again.'));
+            console.error(chalk.gray(e.message));
+            process.exit(1);
+        }
+    } else {
+        console.log(chalk.red('⚠️  Warning: echo-docs directory not found. Skipping docs build.'));
+    }
+
     // 1. Check for sensitive files
     console.log(chalk.yellow('Checking for sensitive files...'));
     if (fs.existsSync(path.join(__dirname, '..', '.env'))) {

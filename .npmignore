@@ -1,14 +1,19 @@
-# Development files
+# Development & Meta
 .git
 .gitignore
 .env
 .env.local
 .vscode
 .idea
+.antigravity
+.antigravityignore
+jest.config.js
+.eslintrc.json
+.prettierrc
 
-# Documentation (keep README.md)
+# Documentation (Main README is kept automatically)
 CONTRIBUTING.md
-SETUP_GUIDE.md
+docs/
 
 # Test files
 test/
@@ -16,13 +21,10 @@ tests/
 *.test.js
 *.spec.js
 
-# Build artifacts
-dist/
-build/
+# Build artifacts & logs
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 
 # OS files
 .DS_Store
@@ -39,3 +41,17 @@ temp/
 # Coverage
 coverage/
 .nyc_output/
+
+# --- Documentation Hub (React App) ---
+# We ignore the source code but KEEP the built assets
+echo-docs/src/
+echo-docs/public/
+echo-docs/node_modules/
+echo-docs/index.html
+echo-docs/tsconfig.json
+echo-docs/tsconfig.node.json
+echo-docs/tsconfig.app.json
+echo-docs/vite.config.ts
+
+# Ensure the built documentation IS included
+!echo-docs/dist/
