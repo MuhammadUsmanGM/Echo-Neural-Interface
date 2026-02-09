@@ -1,19 +1,27 @@
 :root {
     --core-color: #00f2ff;
     --secondary-color: #bc13fe;
-    --glow-color: rgba(0, 242, 255, 0.6);
+    --accent-color: #ff006e;
+    --glow-color: rgba(0, 242, 255, 0.8);
+    --glow-secondary: rgba(188, 19, 254, 0.6);
     --bg-dark: rgba(0, 0, 0, 0);
-    --hud-color: rgba(0, 242, 255, 0.4);
+    --hud-color: rgba(0, 242, 255, 0.5);
+    --glass-bg: rgba(10, 20, 35, 0.4);
+}
+
+* {
+    box-sizing: border-box;
 }
 
 body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background: var(--bg-dark); /* Transparent */
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-dark);
+    font-family: 'Segoe UI', 'Roboto', sans-serif;
     user-select: none;
     -webkit-app-region: drag;
+    position: relative;
 }
 
 .echo-container {
@@ -25,6 +33,60 @@ body {
     position: relative;
 }
 
+/* ==================== AMBIENT BACKGROUND EFFECTS ==================== */
+.ambient-layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.ambient-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 50%;
+    border: 1px solid var(--hud-color);
+    opacity: 0.1;
+    animation: pulse-ambient 4s ease-in-out infinite;
+}
+
+.ambient-ring.ring-1 {
+    width: 400px;
+    height: 400px;
+    margin: -200px 0 0 -200px;
+    animation-delay: 0s;
+}
+
+.ambient-ring.ring-2 {
+    width: 600px;
+    height: 600px;
+    margin: -300px 0 0 -300px;
+    animation-delay: 1.3s;
+}
+
+.ambient-ring.ring-3 {
+    width: 800px;
+    height: 800px;
+    margin: -400px 0 0 -400px;
+    animation-delay: 2.6s;
+}
+
+@keyframes pulse-ambient {
+    0%, 100% { 
+        transform: scale(1);
+        opacity: 0.05;
+    }
+    50% { 
+        transform: scale(1.05);
+        opacity: 0.15;
+    }
+}
+
+/* ==================== ORACLE CORE ==================== */
 .oracle-wrapper {
     position: relative;
     width: 300px;
@@ -34,8 +96,19 @@ body {
     justify-content: center;
     cursor: pointer;
     -webkit-app-region: no-drag;
+    z-index: 10;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+.oracle-wrapper:hover {
+    transform: scale(1.02);
+}
+
+.oracle-wrapper:active {
+    transform: scale(0.98);
+}
+
+/* ==================== PARTICLE CANVAS ==================== */
 #particle-canvas {
     position: absolute;
     top: 0;
@@ -43,88 +116,352 @@ body {
     width: 300px;
     height: 300px;
     border-radius: 50%;
-    /* Subtle glow behind canvas */
-    box-shadow: 0 0 50px var(--glow-color); 
-    background: radial-gradient(circle, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 70%);
+    box-shadow: 
+        0 0 60px var(--glow-color),
+        0 0 100px rgba(0, 242, 255, 0.3),
+        inset 0 0 40px rgba(0, 242, 255, 0.1);
+    background: radial-gradient(circle, rgba(0, 10, 20, 0.9) 0%, rgba(0, 0, 0, 0) 70%);
+    filter: brightness(1.1);
 }
 
+/* ==================== PREMIUM HUD OVERLAY ==================== */
 .hud-ring {
     position: absolute;
-    width: 340px;
-    height: 340px;
+    width: 360px;
+    height: 360px;
     pointer-events: none;
-    animation: rotate-slow 20s linear infinite;
+    filter: drop-shadow(0 0 10px var(--glow-color));
+}
+
+.hud-circle-outer {
+    fill: none;
+    stroke: var(--hud-color);
+    stroke-width: 0.5;
+    opacity: 0.3;
+    animation: rotate-slow 40s linear infinite;
 }
 
 .hud-circle-thin {
     fill: none;
     stroke: var(--hud-color);
     stroke-width: 1;
-    opacity: 0.5;
+    opacity: 0.6;
+    animation: rotate-slow 30s linear infinite reverse;
+}
+
+.hud-circle-pulse {
+    fill: none;
+    stroke: var(--core-color);
+    stroke-width: 2;
+    stroke-opacity: 0.4;
+    animation: pulse-circle 2s ease-in-out infinite;
+}
+
+@keyframes pulse-circle {
+    0%, 100% { 
+        stroke-width: 1;
+        opacity: 0.2;
+    }
+    50% { 
+        stroke-width: 3;
+        opacity: 0.6;
+    }
 }
 
 .hud-arc-dashed {
     fill: none;
+    stroke-width: 2;
+    stroke-dasharray: 15 8;
+    opacity: 0.7;
+}
+
+.hud-arc-dashed.arc-1 {
+    stroke: var(--core-color);
+    animation: rotate-arc 8s linear infinite, glow-pulse 2s ease-in-out infinite;
+}
+
+.hud-arc-dashed.arc-2 {
+    stroke: var(--secondary-color);
+    animation: rotate-arc 10s linear infinite reverse, glow-pulse 2.3s ease-in-out infinite;
+    animation-delay: 0.5s;
+}
+
+.hud-arc-dashed.arc-3 {
+    stroke: var(--core-color);
+    animation: rotate-arc 12s linear infinite, glow-pulse 2.6s ease-in-out infinite;
+    animation-delay: 1s;
+}
+
+.hud-arc-dashed.arc-4 {
+    stroke: var(--secondary-color);
+    animation: rotate-arc 14s linear infinite reverse, glow-pulse 2.9s ease-in-out infinite;
+    animation-delay: 1.5s;
+}
+
+@keyframes rotate-arc {
+    from { stroke-dashoffset: 0; }
+    to { stroke-dashoffset: 200; }
+}
+
+@keyframes glow-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+}
+
+.hud-bracket {
+    fill: none;
     stroke: var(--core-color);
     stroke-width: 2;
-    stroke-dasharray: 10 5;
-    opacity: 0.8;
+    stroke-linecap: round;
+    opacity: 0.7;
+    filter: drop-shadow(0 0 5px var(--core-color));
 }
 
-.hud-arc-dashed-reverse {
-    fill: none;
-    stroke: var(--secondary-color);
-    stroke-width: 2;
-    stroke-dasharray: 20 10;
-    opacity: 0.6;
-}
-
-.hud-notch-top, .hud-notch-bottom {
+.hud-notch {
     fill: var(--core-color);
+    opacity: 0.8;
+    filter: drop-shadow(0 0 5px var(--core-color));
 }
 
-.status-text {
-    margin-top: 40px;
-    color: #fff;
-    font-size: 0.7rem;
-    letter-spacing: 4px;
-    font-weight: 700;
-    text-transform: uppercase;
-    
-    /* Premium HUD Glass Effect */
-    background: rgba(10, 20, 30, 0.6);
-    border: 1px solid var(--hud-color);
-    border-radius: 4px;
-    padding: 8px 16px;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 0 15px rgba(0,0,0,0.5);
-    
-    /* Glitch/Tech text effect */
-    text-shadow: 0 0 5px var(--core-color);
-    position: relative;
-    z-index: 100;
+.hud-center-dot {
+    fill: var(--core-color);
+    opacity: 0.9;
+    animation: pulse-dot 1.5s ease-in-out infinite;
 }
 
-.status-text::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; width: 2px; height: 100%;
-    background: var(--core-color);
+@keyframes pulse-dot {
+    0%, 100% { r: 2; opacity: 0.6; }
+    50% { r: 4; opacity: 1; }
 }
 
-/* Animations */
 @keyframes rotate-slow {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
 
-/* Processing State */
+/* ==================== HOLOGRAPHIC RIPPLE EFFECT ==================== */
+.ripple-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px solid var(--core-color);
+    box-shadow: 0 0 10px var(--glow-color);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.ripple-ring.ring-1 {
+    animation: ripple-out 4s cubic-bezier(0, 0, 0.2, 1) infinite;
+    animation-delay: 0s;
+}
+
+.ripple-ring.ring-2 {
+    animation: ripple-out 4s cubic-bezier(0, 0, 0.2, 1) infinite;
+    animation-delay: 1.3s;
+}
+
+.ripple-ring.ring-3 {
+    animation: ripple-out 4s cubic-bezier(0, 0, 0.2, 1) infinite;
+    animation-delay: 2.6s;
+}
+
+@keyframes ripple-out {
+    0% {
+        width: 0;
+        height: 0;
+        opacity: 0;
+        border-width: 4px;
+    }
+    5% {
+        opacity: 0.8;
+    }
+    100% {
+        width: 400px;
+        height: 400px;
+        opacity: 0;
+        border-width: 0px;
+    }
+}
+
+/* ==================== STATUS PANEL ==================== */
+.status-panel {
+    margin-top: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    z-index: 100;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--glass-bg);
+    border: 1px solid var(--hud-color);
+    border-radius: 20px;
+    padding: 6px 16px;
+    backdrop-filter: blur(10px);
+    box-shadow: 
+        0 0 20px rgba(0, 0, 0, 0.5),
+        inset 0 0 10px rgba(0, 242, 255, 0.05);
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--core-color);
+    box-shadow: 0 0 10px var(--core-color);
+    animation: pulse-status 2s ease-in-out infinite;
+}
+
+@keyframes pulse-status {
+    0%, 100% { 
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 1;
+        transform: scale(1.3);
+    }
+}
+
+#status-label {
+    color: var(--core-color);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-shadow: 0 0 5px var(--glow-color);
+}
+
+.status-text {
+    color: #fff;
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: var(--glass-bg);
+    border: 1px solid var(--hud-color);
+    border-radius: 6px;
+    padding: 10px 20px;
+    backdrop-filter: blur(12px);
+    box-shadow: 
+        0 0 25px rgba(0, 0, 0, 0.6),
+        inset 0 0 15px rgba(0, 242, 255, 0.08),
+        0 0 15px var(--glow-color);
+    position: relative;
+    overflow: hidden;
+    min-width: 300px;
+    text-align: center;
+}
+
+.status-text::before {
+    content: '';
+    position: absolute;
+    top: 0; 
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent, 
+        rgba(0, 242, 255, 0.2), 
+        transparent
+    );
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.status-prefix {
+    color: var(--core-color);
+    margin-right: 8px;
+    font-weight: 700;
+    text-shadow: 0 0 8px var(--core-color);
+    animation: blink 1.5s step-end infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+#status-content {
+    position: relative;
+    z-index: 1;
+}
+
+/* ==================== STATE ANIMATIONS ==================== */
 .echo-container.processing .hud-arc-dashed {
-    animation: rotate-loading 1s linear infinite;
-    stroke: var(--secondary-color);
+    stroke: var(--accent-color);
+    animation: rotate-loading 1.5s linear infinite;
+}
+
+.echo-container.processing .pulse-dot {
+    background: var(--accent-color);
+    animation: pulse-fast 0.5s ease-in-out infinite;
+}
+
+@keyframes pulse-fast {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.6; }
 }
 
 @keyframes rotate-loading {
     from { stroke-dashoffset: 0; }
-    to { stroke-dashoffset: 100; }
+    to { stroke-dashoffset: -200; }
+}
+
+.echo-container.talking #particle-canvas {
+    box-shadow: 
+        0 0 80px var(--glow-secondary),
+        0 0 120px rgba(188, 19, 254, 0.4),
+        inset 0 0 50px rgba(188, 19, 254, 0.15);
+}
+
+.echo-container.talking .pulse-dot {
+    background: var(--secondary-color);
+    box-shadow: 0 0 15px var(--secondary-color);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 768px) {
+    .oracle-wrapper {
+        width: 250px;
+        height: 250px;
+    }
+    
+    #particle-canvas {
+        width: 250px;
+        height: 250px;
+    }
+    
+    .hud-ring {
+        width: 300px;
+        height: 300px;
+    }
+    
+    .status-text {
+        font-size: 0.65rem;
+        min-width: 250px;
+    }
+}
+
+/* ==================== PERFORMANCE OPTIMIZATIONS ==================== */
+.oracle-wrapper,
+.hud-ring,
+.ambient-ring,
+.scan-line {
+    will-change: transform;
+}
+
+#particle-canvas {
+    will-change: box-shadow;
 }

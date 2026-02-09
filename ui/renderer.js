@@ -1,21 +1,41 @@
-const statusText = document.getElementById('status-text');
+const statusText = document.getElementById('status-content');
+const statusLabel = document.getElementById('status-label');
 const echoContainer = document.querySelector('.echo-container');
 const canvas = document.getElementById('particle-canvas');
 const ctx = canvas.getContext('2d');
 
-// Canvas Setup
-let width, height;
+// Canvas Setup with Hi-DPI support
+let width, height, dpr;
 function resize() {
-    width = canvas.width = 300; // Hi-DPI
-    height = canvas.height = 300;
+    dpr = window.devicePixelRatio || 1;
+    width = canvas.width = 300 * dpr;
+    height = canvas.height = 300 * dpr;
+    canvas.style.width = '300px';
+    canvas.style.height = '300px';
+    ctx.scale(dpr, dpr);
 }
 resize();
 window.addEventListener('resize', resize);
 
-// Particle System
+// Theme State
+let currentTheme = {
+    r: 0, g: 242, b: 255, // Default Cyan
+    hex: '#00f2ff'
+};
+
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : { r: 0, g: 242, b: 255 };
+}
+
+// ==================== PREMIUM PARTICLE SYSTEM ====================
 const particles = [];
-const PARTICLE_COUNT = 1500; // High particle count for density
-const SPHERE_RADIUS = 80;
+const PARTICLE_COUNT = 2000;
+const SPHERE_RADIUS = 85;
 
 class Particle {
     constructor() {
@@ -23,11 +43,9 @@ class Particle {
     }
 
     reset() {
-        // Random point on sphere surface
-        const u = Math.random();
-        const v = Math.random();
-        const theta = 2 * Math.PI * u;
-        const phi = Math.acos(2 * v - 1);
+        const i = particles.length;
+        const phi = Math.acos(1 - 2 * (i + 0.5) / PARTICLE_COUNT);
+        const theta = Math.PI * (1 + Math.sqrt(5)) * i;
         
         this.x = SPHERE_RADIUS * Math.sin(phi) * Math.cos(theta);
         this.y = SPHERE_RADIUS * Math.sin(phi) * Math.sin(theta);
@@ -37,90 +55,132 @@ class Particle {
         this.baseY = this.y;
         this.baseZ = this.z;
         
-        this.size = Math.random() * 1.5 + 0.5;
-        this.color = `rgba(0, 242, 255, ${Math.random() * 0.5 + 0.2})`; // Core Cyan
+        this.size = Math.random() * 1.8 + 0.4;
+        this.baseSize = this.size;
+        
+        // Use current theme color
+        const { r, g, b } = currentTheme;
+        const colorVariant = Math.random();
+        
+        if (colorVariant > 0.85) {
+             this.color = `rgba(${Math.min(255, r + 100)}, ${Math.max(0, g - 50)}, ${b}, `;
+        } else if (colorVariant > 0.7) {
+             this.color = `rgba(${r}, ${g}, ${b}, `;
+        } else {
+             this.color = `rgba(${r}, ${g}, ${b}, `;
+        }
+        
+        this.offset = Math.random() * Math.PI * 2;
     }
 
     update(rotationX, rotationY, audioLevel, time) {
-        // 1. Basic 3D Rotation
-        let y = this.y * Math.cos(rotationX) - this.z * Math.sin(rotationX);
-        let z = this.y * Math.sin(rotationX) + this.z * Math.cos(rotationX);
-        this.y = y;
-        this.z = z;
-
-        let x = this.x * Math.cos(rotationY) - this.z * Math.sin(rotationY);
-        z = this.x * Math.sin(rotationY) + this.z * Math.cos(rotationY);
-        this.x = x;
-        this.z = z;
-
-        // 2. Wavy "Liquid" Behavior Control
-        // We use sine waves based on the particle's original position (baseY) and current time
-        // The 'audioLevel' controls the AMPLITUDE (height) of the waves
+        let tempY = this.baseY * Math.cos(rotationX) - this.baseZ * Math.sin(rotationX);
+        let tempZ = this.baseY * Math.sin(rotationX) + this.baseZ * Math.cos(rotationX);
         
-        const waveFrequency = 0.1; 
-        const waveSpeed = 0.005;
-        const waveAmplitude = audioLevel * 0.8; // How high the wave spikes
+        let tempX = this.baseX * Math.cos(rotationY) - tempZ * Math.sin(rotationY);
+        tempZ = this.baseX * Math.sin(rotationY) + tempZ * Math.cos(rotationY);
 
-        // Calculate a ripple offset
-        const ripple = Math.sin(this.baseY * waveFrequency + time * waveSpeed) * waveAmplitude;
-        const ripple2 = Math.cos(this.baseX * waveFrequency + time * waveSpeed) * waveAmplitude;
-
-        // Apply the ripple to the particle's distance from center (radius)
-        // This makes the sphere surface distort
-        const distortion = 1 + (ripple + ripple2) / 200;
+        const waveFreq1 = 0.08;
+        const waveFreq2 = 0.12;
+        const waveSpeed = 0.003;
         
-        this.currentX = this.x * distortion;
-        this.currentY = this.y * distortion;
+        const baseAmplitude = 15 + (audioLevel * 0.6);
         
-        // Perspective projection
-        const scale = 300 / (300 + this.z);
-        this.screenX = width/2 + this.currentX * scale;
-        this.screenY = height/2 + this.currentY * scale;
-        this.screenSize = this.size * scale;
+        const wave1 = Math.sin(tempY * waveFreq1 + time * waveSpeed + this.offset) * baseAmplitude;
+        const wave2 = Math.cos(tempX * waveFreq2 + time * waveSpeed * 1.3) * baseAmplitude * 0.7;
+        const wave3 = Math.sin((tempX + tempY) * 0.05 + time * waveSpeed * 0.8) * baseAmplitude * 0.5;
         
-        // Brightness reacts to the wave peak
-        const brightness = 0.5 + (audioLevel / 100) + (ripple / 50);
-        this.screenAlpha = Math.min(1, Math.max(0.1, brightness)); 
+        const totalWave = (wave1 + wave2 + wave3) / 3;
+        const distortion = 1 + (totalWave / 300);
+        
+        this.x = tempX * distortion;
+        this.y = tempY * distortion;
+        this.z = tempZ * distortion;
+        
+        const perspective = 400;
+        const scale = perspective / (perspective + this.z);
+        
+        this.screenX = 150 + this.x * scale;
+        this.screenY = 150 + this.y * scale;
+        
+        const depthScale = scale * (1 + audioLevel / 200);
+        this.screenSize = this.baseSize * depthScale;
+        
+        const depthBrightness = (this.z + SPHERE_RADIUS) / (SPHERE_RADIUS * 2);
+        const waveBrightness = (totalWave + baseAmplitude * 2) / (baseAmplitude * 4);
+        const audioBrightness = audioLevel / 100;
+        
+        this.screenAlpha = Math.min(0.9, Math.max(0.15, 
+            depthBrightness * 0.4 + 
+            waveBrightness * 0.3 + 
+            audioBrightness * 0.3
+        ));
     }
 
     draw() {
-        ctx.fillStyle = this.color.replace('rgba', 'rgb').replace(')', `, ${this.screenAlpha})`); 
+        const gradient = ctx.createRadialGradient(
+            this.screenX, this.screenY, 0,
+            this.screenX, this.screenY, this.screenSize * 2
+        );
+        gradient.addColorStop(0, this.color + this.screenAlpha + ')');
+        gradient.addColorStop(1, this.color + '0)');
+        
+        ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.arc(this.screenX, this.screenY, this.screenSize, 0, Math.PI * 2);
         ctx.fill();
+        
+        if (this.screenAlpha > 0.6) {
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = this.color + this.screenAlpha + ')';
+            ctx.beginPath();
+            ctx.arc(this.screenX, this.screenY, this.screenSize * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
     }
 }
 
-// Initialize Particles
-for(let i=0; i<PARTICLE_COUNT; i++) {
+for(let i = 0; i < PARTICLE_COUNT; i++) {
     particles.push(new Particle());
 }
 
+// ==================== ANIMATION STATE ====================
 let audioLevel = 0;
-let rotationX = 0.005;
-let rotationY = 0.005;
+let targetAudioLevel = 0;
+let rotationX = 0;
+let rotationY = 0;
+let rotationSpeedX = 0.003;
+let rotationSpeedY = 0.004;
+let time = 0;
+let isEchoSpeaking = false;
 
 function animate() {
-    ctx.clearRect(0, 0, width, height);
+    audioLevel += (targetAudioLevel - audioLevel) * 0.15;
     
-    // Time variable for wave phase
-    const time = Date.now();
+    rotationX += rotationSpeedX;
+    rotationY += rotationSpeedY;
+    time = Date.now();
     
-    // Core glow (Dynamic Pulse)
-    // The glow should pulsate with the sound too
-    const corePulse = 10 + (audioLevel * 2); // Expands up to +50px
-    const gradient = ctx.createRadialGradient(width/2, height/2, 10, width/2, height/2, 120 + corePulse);
-    gradient.addColorStop(0, `rgba(0, 242, 255, ${0.1 + audioLevel/300})`);
-    gradient.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.fillRect(0, 0, width, height);
-
-    // Speed up rotation slightly when loud, otherwise gentle spin
-    const speedMultiplier = 1 + (audioLevel / 500); 
+    
+    // Core glow using Theme Color
+    const glowRadius = 80 + (audioLevel * 1.5);
+    const glowIntensity = 0.15 + (audioLevel / 250);
+    const { r, g, b } = currentTheme;
+    
+    const gradient = ctx.createRadialGradient(150, 150, 20, 150, 150, glowRadius);
+    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${glowIntensity})`);
+    gradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${glowIntensity * 0.3})`);
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 300, 300);
+    
+    particles.sort((a, b) => a.z - b.z);
     
     particles.forEach(p => {
-        // Pass time to drive the ripple
-        p.update(rotationX * speedMultiplier, rotationY * speedMultiplier, audioLevel, time);
+        p.update(rotationX, rotationY, audioLevel, time);
         p.draw();
     });
 
@@ -128,19 +188,27 @@ function animate() {
 }
 animate();
 
-// --- LOGIC ---
+// ==================== AUDIO & SPEECH RECOGNITION ====================
 
-// Load and apply theme
-window.electronAPI.onApplyTheme((themeColors) => {
-    document.documentElement.style.setProperty('--core-color', themeColors.core);
-    document.documentElement.style.setProperty('--glow-color', themeColors.glow);
-    // Update particle colors? For now just use CSS var for HUD
-});
+// Theme application
+if (window.electronAPI) {
+    window.electronAPI.onApplyTheme((themeColors) => {
+        document.documentElement.style.setProperty('--core-color', themeColors.core);
+        document.documentElement.style.setProperty('--glow-color', themeColors.glow);
+        
+        // Update JS Theme State
+        const rgb = hexToRgb(themeColors.core);
+        currentTheme = { r: rgb.r, g: rgb.g, b: rgb.b, hex: themeColors.core };
+        
+        // Re-initialize particles to apply new color instantly
+        particles.forEach(p => p.reset());
+    });
+}
 
 let audioContext;
 let analyser;
 let microphone;
-let javascriptNode;
+let dataArray;
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition;
@@ -152,7 +220,9 @@ if (SpeechRecognition) {
     recognition.lang = 'en-US';
 
     recognition.onstart = () => {
-        statusText.innerText = "LISTENING...";
+        statusLabel.innerText = "LISTENING_AGENT";
+        statusText.innerText = "AWAITING INPUT...";
+        echoContainer.classList.add('listening');
     };
 
     recognition.onresult = (event) => {
@@ -167,105 +237,200 @@ if (SpeechRecognition) {
             handleVoiceCommand(transcript);
         }
     };
+
+    recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'no-speech') {
+            statusText.innerText = "NO INPUT DETECTED";
+        }
+    };
+
+    recognition.onend = () => {
+        if (echoContainer.classList.contains('listening') && !echoContainer.classList.contains('talking') && !isEchoSpeaking) {
+            try { recognition.start(); } catch(e) {}
+        }
+    };
 } else {
-    statusText.innerText = "NO SPEECH API";
+    statusLabel.innerText = "ERROR";
+    statusText.innerText = "SPEECH API UNAVAILABLE";
 }
 
 async function handleVoiceCommand(text) {
-    statusText.innerText = "PROCESSING";
+    statusLabel.innerText = "ANALYZING";
+    statusText.innerText = "PROCESSING DATA...";
+    echoContainer.classList.remove('listening');
     echoContainer.classList.add('processing');
     
-    // Visual feedback: Spin fast
-    rotationY = 0.05;
+    rotationSpeedX = 0.02;
+    rotationSpeedY = 0.02;
 
     try {
-        const result = await window.electronAPI.processInput(text);
-        
-        echoContainer.classList.remove('processing');
-        echoContainer.classList.add('talking');
-        statusText.innerText = result.action ? `ACTION: ${result.action.toUpperCase()}` : "SPEAKING";
-        
-        speakResponse(result.text);
-        
+        if (window.electronAPI) {
+            const result = await window.electronAPI.processInput(text);
+            
+            echoContainer.classList.remove('processing');
+            echoContainer.classList.add('talking');
+            
+            statusLabel.innerText = "SYSTEM_ACTIVE";
+            statusText.innerText = "TRANSMITTING RESPONSE";
+            
+            speakResponse(result.text);
+        } else {
+            echoContainer.classList.remove('processing');
+            echoContainer.classList.add('talking');
+            statusLabel.innerText = "SYSTEM_ACTIVE";
+            statusText.innerText = "TRANSMITTING RESPONSE";
+            speakResponse(`You said: ${text}`);
+        }
     } catch (err) {
         console.error("Processing Error:", err);
-        statusText.innerText = "SYSTEM ERROR";
+        statusLabel.innerText = "ERROR";
+        statusText.innerText = "SYSTEM FAILURE";
         echoContainer.classList.remove('processing');
-        speakResponse("I encountered a critical error.");
-    } finally {
-        rotationY = 0.005; // Reset speed
+        speakResponse("I encountered a critical system error. Please try again.");
     }
 }
 
 function speakResponse(text) {
-    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+    }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => v.name.includes('Google UK English Male') || v.name.includes('Microsoft David') || v.name.includes('Google US English'));
-    if (preferredVoice) utterance.voice = preferredVoice;
+    
+    const setVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoices = [
+            'Google UK English Male',
+            'Microsoft David',
+            'Google US English',
+            'Alex',
+            'Daniel'
+        ];
+        
+        for (let voiceName of preferredVoices) {
+            const voice = voices.find(v => v.name.includes(voiceName));
+            if (voice) {
+                utterance.voice = voice;
+                break;
+            }
+        }
+    };
+    
+    if (window.speechSynthesis.getVoices().length) {
+        setVoice();
+    } else {
+        window.speechSynthesis.onvoiceschanged = setVoice;
+    }
 
-    utterance.pitch = 0.9;
-    utterance.rate = 1.0;
+    utterance.pitch = 0.95;
+    utterance.rate = 1.05;
+    utterance.volume = 1.0;
 
     utterance.onend = () => {
         echoContainer.classList.remove('talking');
-        statusText.innerText = "LISTENING...";
-        if (recognition) {
+        statusLabel.innerText = "LISTENING_AGENT";
+        statusText.innerText = "AWAITING INPUT...";
+        
+        rotationSpeedX = 0.003;
+        rotationSpeedY = 0.004;
+        
+        if (recognition && !isEchoSpeaking) {
             try { recognition.start(); } catch(e) {}
         }
     };
 
-    // Simulate audio level for TTS (fake visualizer for output)
-    const flickerInterval = setInterval(() => {
-        audioLevel = Math.random() * 50; 
-        if(!window.speechSynthesis.speaking) {
-            clearInterval(flickerInterval);
-            audioLevel = 0;
-        }
-    }, 50);
+    let ttsInterval;
+    const startTTSVisualization = () => {
+        isEchoSpeaking = true;
+        ttsInterval = setInterval(() => {
+            if (window.speechSynthesis.speaking) {
+                targetAudioLevel = 50 + Math.random() * 70;
+            } else {
+                clearInterval(ttsInterval);
+                targetAudioLevel = 0;
+                isEchoSpeaking = false;
+            }
+        }, 80);
+    };
 
+    startTTSVisualization();
     window.speechSynthesis.speak(utterance);
 }
 
 async function startVisualizer() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioContext = new AudioContext();
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }
+        });
+        
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioContext.createAnalyser();
         microphone = audioContext.createMediaStreamSource(stream);
-        javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
-
-        analyser.smoothingTimeConstant = 0.8;
-        analyser.fftSize = 256;
+        
+        analyser.smoothingTimeConstant = 0.85;
+        analyser.fftSize = 512;
+        
+        const bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
 
         microphone.connect(analyser);
-        analyser.connect(javascriptNode);
-        javascriptNode.connect(audioContext.destination);
-
-        javascriptNode.onaudioprocess = () => {
-            const array = new Uint8Array(analyser.frequencyBinCount);
-            analyser.getByteFrequencyData(array);
-            let values = 0;
-            for (let i = 0; i < array.length; i++) { values += array[i]; }
-            
-            // Set global audio level for particles
-            audioLevel = values / array.length; 
-        };
         
-        if (recognition) {
+        function updateAudioLevel() {
+            if (isEchoSpeaking) {
+                requestAnimationFrame(updateAudioLevel);
+                return;
+            }
+
+            analyser.getByteFrequencyData(dataArray);
+            
+            let sum = 0;
+            const start = Math.floor(bufferLength * 0.1);
+            const end = Math.floor(bufferLength * 0.7);
+            
+            for (let i = start; i < end; i++) {
+                sum += dataArray[i];
+            }
+            
+            const average = sum / (end - start);
+            
+            targetAudioLevel = Math.min(50, average * 1.5); 
+            
+            requestAnimationFrame(updateAudioLevel);
+        }
+        updateAudioLevel();
+        
+        if (recognition && !isEchoSpeaking) {
+            echoContainer.classList.add('listening');
             try { recognition.start(); } catch(e) {}
         }
+        
+        statusLabel.innerText = "ONLINE";
+        statusText.innerText = "AWAITING COMMAND";
+        
     } catch (err) {
-        console.error("Mic access denied:", err);
+        console.error("Microphone access error:", err);
+        statusLabel.innerText = "ERROR";
         statusText.innerText = "MIC ACCESS DENIED";
     }
 }
 
-// Click anywhere on wrapper to start
-document.querySelector('.oracle-wrapper').addEventListener('click', () => {
-    if (!audioContext) {
-        startVisualizer();
-        statusText.innerText = "INITIALIZING...";
-    }
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        if (!audioContext) {
+            startVisualizer();
+            statusLabel.innerText = "ONLINE";
+            statusText.innerText = "AWAITING COMMAND";
+        }
+    }, 1000);
 });
+
+document.querySelector('.oracle-wrapper').addEventListener('click', () => {
+    if (!audioContext) startVisualizer();
+});
+
+document.addEventListener('contextmenu', e => e.preventDefault());

@@ -3,26 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Echo AI Agent</title>
+    <title>Echo AI Agent - Premium</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="echo-container" role="main" aria-label="Echo AI Interface">
+        <!-- Background Ambient Effects -->
+        <div class="ambient-layer">
+            <div class="ambient-ring ring-1"></div>
+            <div class="ambient-ring ring-2"></div>
+            <div class="ambient-ring ring-3"></div>
+        </div>
+
         <div class="oracle-wrapper" role="button" aria-label="Activate Voice Command" tabindex="0">
-            <!-- 3D Particle Canvas -->
+            <!-- Core Hologram Canvas -->
             <canvas id="particle-canvas"></canvas>
             
-            <!-- HUD Overlay (SVG) -->
+            <!-- Premium HUD Overlay -->
             <svg class="hud-ring" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <!-- Outer decorative circles -->
+                <circle cx="100" cy="100" r="95" class="hud-circle-outer" />
                 <circle cx="100" cy="100" r="90" class="hud-circle-thin" />
-                <path d="M 100 5 A 95 95 0 0 1 195 100" class="hud-arc-dashed" />
-                <path d="M 100 195 A 95 95 0 0 1 5 100" class="hud-arc-dashed-reverse" />
-                <rect x="98" y="2" width="4" height="10" class="hud-notch-top" />
-                <rect x="98" y="188" width="4" height="10" class="hud-notch-bottom" />
+                <circle cx="100" cy="100" r="85" class="hud-circle-pulse" />
+                
+                <!-- Dynamic arcs -->
+                <path d="M 100 5 A 95 95 0 0 1 195 100" class="hud-arc-dashed arc-1" />
+                <path d="M 195 100 A 95 95 0 0 1 100 195" class="hud-arc-dashed arc-2" />
+                <path d="M 100 195 A 95 95 0 0 1 5 100" class="hud-arc-dashed arc-3" />
+                <path d="M 5 100 A 95 95 0 0 1 100 5" class="hud-arc-dashed arc-4" />
+                
+                <!-- Corner brackets (sci-fi framing) -->
+                <path d="M 30 30 L 30 50 M 30 30 L 50 30" class="hud-bracket" />
+                <path d="M 170 30 L 170 50 M 170 30 L 150 30" class="hud-bracket" />
+                <path d="M 30 170 L 30 150 M 30 170 L 50 170" class="hud-bracket" />
+                <path d="M 170 170 L 170 150 M 170 170 L 150 170" class="hud-bracket" />
+                
+                <!-- Cardinal direction markers -->
+                <rect x="98" y="2" width="4" height="12" class="hud-notch" />
+                <rect x="98" y="186" width="4" height="12" class="hud-notch" />
+                <rect x="2" y="98" width="12" height="4" class="hud-notch" />
+                <rect x="186" y="98" width="12" height="4" class="hud-notch" />
+                
+                <!-- Center crosshair -->
+                <circle cx="100" cy="100" r="3" class="hud-center-dot" />
             </svg>
+
+            <!-- Holographic Ripples (Radar Ping) -->
+            <div class="ripple-ring ring-1"></div>
+            <div class="ripple-ring ring-2"></div>
+            <div class="ripple-ring ring-3"></div>
         </div>
         
-        <div id="status-text" class="status-text" aria-live="polite">LISTENING...</div>
+        <!-- Premium Status Display -->
+        <div class="status-panel">
+            <div class="status-indicator">
+                <div class="pulse-dot"></div>
+                <span id="status-label">STANDBY</span>
+            </div>
+            <div id="status-text" class="status-text" aria-live="polite">
+                <span class="status-prefix">></span>
+                <span id="status-content">STANDBY</span>
+            </div>
+        </div>
     </div>
     <script src="renderer.js"></script>
 </body>
