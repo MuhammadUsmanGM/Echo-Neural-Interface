@@ -61,10 +61,34 @@ program
   .action((options) => {
     if (options.list) {
       console.log(chalk.cyan('\n📋 Current Configuration:\n'));
-      const allConfig = config.store;
-      Object.keys(allConfig).forEach(key => {
-        console.log(`  ${chalk.bold(key)}: ${chalk.gray(JSON.stringify(allConfig[key]))}`);
-      });
+      
+      const c = config.store;
+
+      console.log(chalk.yellow('🎨 Appearance'));
+      console.log(`  ${chalk.bold('Theme:')} ${c.theme || 'default'} ${chalk.hex(config.getThemeColors(c.theme).core)('●')}`);
+      console.log(`  ${chalk.bold('Window Size:')} ${c.size || 'medium'}`);
+      console.log(`  ${chalk.bold('Position:')} ${c.position || 'bottom-right'}`);
+      console.log(`  ${chalk.bold('Always on Top:')} ${c.alwaysOnTop ? chalk.green('Yes') : chalk.red('No')}`);
+      
+      console.log(chalk.yellow('\n🔊 Voice & System'));
+      console.log(`  ${chalk.bold('Voice Provider:')} ${c.voiceProvider === 'whisper' ? 'Whisper (Local)' : 'Browser (Online)'}`);
+      console.log(`  ${chalk.bold('Start on Boot:')} ${c.startOnBoot ? chalk.green('Enabled') : chalk.gray('Disabled')}`);
+      if (c.voiceProvider === 'whisper') {
+        console.log(`  ${chalk.bold('Whisper Auto-Start:')} ${c.whisperStartup ? chalk.green('Yes') : chalk.gray('No')}`);
+      }
+      
+      console.log(chalk.yellow('\n🔑 Credentials'));
+      const key = c.apiKey || '';
+      const maskedKey = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : '(Not Set)';
+      console.log(`  ${chalk.bold('Gemini API Key:')} ${maskedKey}`);
+      
+      console.log(chalk.yellow('\n🧩 Plugins'));
+      if (c.plugins && c.plugins.length > 0) {
+        c.plugins.forEach(p => console.log(`  - ${p}`));
+      } else {
+        console.log(chalk.gray('  (No plugins installed)'));
+      }
+      console.log('');
     } else if (options.set) {
       const [key, value] = options.set;
       config.set(key, value);
