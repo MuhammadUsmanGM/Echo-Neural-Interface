@@ -137,20 +137,40 @@ class PluginManager {
     }
 
     /**
-     * List all installed plugins
+     * List all installed plugins (both enabled and disabled)
      */
     listPlugins() {
         const plugins = [];
         const enabledPlugins = this.config.get('plugins') || [];
         
-        for (const [name, plugin] of this.plugins) {
-            plugins.push({
-                name,
-                version: plugin.version || '1.0.0',
-                description: plugin.description || 'No description',
-                enabled: enabledPlugins.includes(name),
-                commands: Object.keys(plugin.commands).length
-            });
+        try {
+            const files = fs.readdirSync(this.pluginDir);
+            
+            for (const file of files) {
+                if (file.endsWith('.js')) {
+                    const pluginPath = path.join(this.pluginDir, file);
+                    try {
+                        // Clear cache to get fresh plugin data
+                        delete require.cache[require.resolve(pluginPath)];
+                        const plugin = require(pluginPath);
+                        
+                        if (plugin.name && plugin.commands) {
+                            plugins.push({
+                                name: plugin.name,
+                                version: plugin.version || '1.0.0',
+                                description: plugin.description || 'No description',
+                                enabled: enabledPlugins.includes(plugin.name),
+                                filename: file,
+                                commands: Object.keys(plugin.commands).length
+                            });
+                        }
+                    } catch (e) {
+                        // Skip invalid plugins
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error listing plugins:', error);
         }
         
         return plugins;
