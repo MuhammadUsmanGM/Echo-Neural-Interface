@@ -154,6 +154,15 @@ process.on('unhandledRejection', (reason, promise) => {
 app.whenReady().then(async () => {
     await initializeBrain();
     createWindow();
+    
+    // Auto-update check (runs once per day)
+    try {
+        const { checkForUpdatesOnStartup } = require('../scripts/auto-update');
+        await checkForUpdatesOnStartup();
+    } catch (error) {
+        // Silently fail - don't interrupt user experience
+        console.error('Auto-update check failed:', error);
+    }
 });
 
 app.on('will-quit', () => {

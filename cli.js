@@ -143,6 +143,7 @@ program
               { name: '🧩 Plugin Management', value: 'plugins' },
               { name: '⌨️  Workflow Macros', value: 'workflows' },
               { name: '🚀 Startup Settings', value: 'startup' },
+              { name: '🔄 Auto-Update Settings', value: 'autoupdate' },
               { name: '⚠️  Reset All Settings', value: 'reset' },
               new inquirer.Separator(),
               { name: '❌ Exit', value: 'exit' }
@@ -368,6 +369,22 @@ program
             }
             break;
             
+          case 'autoupdate':
+            const currentAutoUpdate = config.get('autoUpdateCheck') !== false;
+            const autoUpdateConfirm = await inquirer.prompt([
+                {
+                    type: 'confirm',
+                    name: 'enable',
+                    message: currentAutoUpdate 
+                        ? 'Auto-update check is enabled. Would you like to disable it?' 
+                        : 'Would you like Echo to automatically check for updates on startup?',
+                    default: !currentAutoUpdate
+                }
+            ]);
+            config.set('autoUpdateCheck', currentAutoUpdate ? !autoUpdateConfirm.enable : autoUpdateConfirm.enable);
+            console.log(chalk.green(`✓ Auto-update check ${currentAutoUpdate && autoUpdateConfirm.enable ? 'disabled' : 'enabled'}.`));
+            break;
+            
           case 'workflows':
             const workflowManager = require('./scripts/workflow-manager-cli');
             await workflowManager.run();
@@ -481,7 +498,7 @@ program
         const latest = execSync(`npm view ${packageJson.name} version`, { encoding: 'utf8' }).trim();
         if (latest && latest !== packageJson.version) {
             console.log(chalk.yellow(`\n⚠️  Update available: ${latest} (Current: ${packageJson.version})`));
-            console.log(chalk.white(`   Run `) + chalk.cyan(`npm install -g ${packageJson.name}`) + chalk.white(` to update.`));
+            console.log(chalk.white(`   Run `) + chalk.cyan(`echo update`) + chalk.white(` to update.`));
         } else {
             console.log(chalk.green('\n✓ You are using the latest version.'));
         }
@@ -489,6 +506,40 @@ program
         // Ignore network errors during update check
     }
   });
+
+program
+  .command('update')
+  .description('Update Echo to the latest version')
+  .option('--check', 'Only check for updates without installing')
+  .action(async (options) => {
+    console.log(banner);
+    const UpdateManager = require('./scripts/update-manager');
+    const updater = new UpdateManager();
+
+    if (options.check) {
+      const spinner = require('ora')('Checking for updates...').start();
+      const updateInfo = await updater.checkForUpdates();
+      
+      if (updateInfo.error) {
+        spinner.fail(chalk.red('Update check failed: ' + updateInfo.error));
+        return;
+      }
+
+      spinner.stop();
+      
+      if (updateInfo.updateAvailable) {
+        console.log(chalk.cyan('\n🔔 Update Available!\n'));
+        console.log(`  ${chalk.bold('Current Version:')} ${chalk.yellow(updateInfo.currentVersion)}`);
+        console.log(`  ${chalk.bold('Latest Version:')}  ${chalk.green(updateInfo.latestVersion)}`);
+        console.log(chalk.gray('\nRun ') + chalk.cyan('echo update') + chalk.gray(' to install.\n'));
+      } else {
+        console.log(chalk.green(`\n✓ You're already on the latest version (${updateInfo.currentVersion})\n`));
+      }
+    } else {
+      await updater.performUpdate();
+    }
+  });
+
 
 program
   .command('docs')

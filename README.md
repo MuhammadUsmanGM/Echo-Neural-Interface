@@ -110,6 +110,8 @@ echo docs
 | `echo setup` | Interactive neural configuration wizard |
 | `echo config` | Main hub for themes, voice, and system settings |
 | `echo docs` | Launches the Emerald Documentation Hub |
+| `echo update` | Update Echo to the latest version |
+| `echo update --check` | Check for updates without installing |
 | `echo startup` | Quick toggle for Enable/Disable boot launch |
 | `echo memory` | Manage or clear your local conversational history |
 | `echo plugins` | Manage, enable, or generate new AI capabilities |

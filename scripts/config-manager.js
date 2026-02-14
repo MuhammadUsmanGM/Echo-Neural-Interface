@@ -22,7 +22,9 @@ class ConfigManager {
         whisperStartup: false,
         memoryEnabled: true,
         workflows: {},
-        plugins: ['example-plugin', 'productivity-plugin', 'system-control-plugin', 'workflow-plugin']
+        plugins: ['example-plugin', 'productivity-plugin', 'system-control-plugin', 'workflow-plugin'],
+        autoUpdateCheck: true,
+        lastUpdateCheck: null
       }
     });
   }
