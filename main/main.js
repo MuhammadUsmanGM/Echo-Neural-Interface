@@ -10,6 +10,8 @@ const { CHANNELS, THEMES, COMMANDS, MESSAGES } = require('../utils/constants');
 require('dotenv').config();
 
 let mainWindow;
+let tray;
+let isQuitting = false;
 let brain;
 let whisper;
 let scheduler;
@@ -134,11 +136,87 @@ function createWindow() {
         }
     });
 
+    // Create Tray Icon
+    try {
+        let trayIcon;
+        const iconPath = path.join(__dirname, '../assets/icon.png');
+        
+        // Check if icon exists, otherwise use fallback
+        const fs = require('fs');
+        if (fs.existsSync(iconPath)) {
+            trayIcon = iconPath;
+        } else {
+            // Use generating utility for fallback
+            try {
+                const { createTrayIcon } = require('../utils/tray-icon');
+                trayIcon = createTrayIcon();
+            } catch (err) {
+                console.log('Fallback icon generation failed:', err);
+            }
+        }
+        
+        if (trayIcon) {
+            tray = new Tray(trayIcon);
+            
+            const trayMenu = Menu.buildFromTemplate([
+                { label: 'Echo AI Agent', enabled: false },
+                { type: 'separator' },
+                { 
+                    label: 'Show Interface', 
+                    click: () => {
+                        mainWindow.show();
+                        mainWindow.focus();
+                    }
+                },
+                { 
+                    label: 'Hide', 
+                    click: () => mainWindow.hide() 
+                },
+                { type: 'separator' },
+                { 
+                    label: 'Quit Echo', 
+                    click: () => {
+                        isQuitting = true;
+                        app.quit();
+                    }
+                }
+            ]);
+            
+            tray.setToolTip('Echo AI Agent');
+            tray.setContextMenu(trayMenu);
+            
+            tray.on('click', () => {
+                if (mainWindow.isVisible()) {
+                    mainWindow.hide();
+                } else {
+                    mainWindow.show();
+                    mainWindow.focus();
+                }
+            });
+        }
+    } catch (e) {
+        console.log('Tray icon could not be created:', e);
+    }
+
     // Send theme configuration to renderer
     mainWindow.webContents.on('did-finish-load', () => {
         const theme = config.get('theme') || 'cyan';
         const themeColors = config.getThemeColors(theme);
         mainWindow.webContents.send('apply-theme', themeColors);
+    });
+
+    // Handle minimize/close to tray
+    mainWindow.on('close', (event) => {
+        if (!isQuitting) {
+            event.preventDefault();
+            mainWindow.hide();
+            return false;
+        }
+    });
+
+    mainWindow.on('minimize', (event) => {
+        event.preventDefault();
+        mainWindow.hide();
     });
 }
 
