@@ -6,8 +6,9 @@
 const AI_MODELS = {
     google: {
         name: 'Google Gemini',
-        defaultModel: 'gemini-2.0-flash-lite',
+        defaultModel: 'gemini-2.5-flash-lite',
         models: [
+            { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Free Tier)' },
             { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite (Fastest)' },
             { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Balanced)' },
             { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Most Intelligent)' }
