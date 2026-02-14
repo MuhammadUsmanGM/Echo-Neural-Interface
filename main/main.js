@@ -21,8 +21,8 @@ const pluginManager = new PluginManager();
 async function initializeBrain() {
     const provider = config.get('aiProvider') || 'google';
     const apiKeys = config.get('apiKeys') || {};
-    const apiKey = apiKeys[provider] || process.env.GOOGLE_AI_API_KEY;
-    const model = config.get('model') || 'gemini-2.0-flash-lite';
+    const apiKey = apiKeys[provider] || process.env[provider === 'google' ? 'GOOGLE_AI_API_KEY' : `${provider.toUpperCase()}_API_KEY`];
+    const model = config.get('model'); // Let service handle default if null
     
     // Initialize Whisper Service based on provider
     const voiceProvider = config.get('voiceProvider') || 'browser';
@@ -45,22 +45,87 @@ async function initializeBrain() {
         // Load plugins first
         await pluginManager.loadPlugins();
         
-        // Convert plugin commands to Gemini tool format
-        const pluginTools = pluginManager.listPlugins().filter(p => p.enabled).flatMap(p => {
-            const plugin = pluginManager.plugins.get(p.name);
-            return Object.keys(plugin.commands).map(cmdName => ({
-                name: cmdName,
-                description: plugin.commandDescriptions?.[cmdName] || `Execute ${cmdName} command`,
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        args: { type: "STRING", description: "Arguments for the command" }
-                    }
-                }
-            }));
-        });
+        // Load appropriate brain service
+        switch (provider) {
+            case 'openai':
+                const OpenAIBrain = require('../services/openai');
+                // Convert plugins to OpenAI tools format
+                const openaiTools = pluginManager.listPlugins().filter(p => p.enabled).flatMap(p => {
+                    const plugin = pluginManager.plugins.get(p.name);
+                    return Object.keys(plugin.commands).map(cmdName => ({
+                        name: cmdName,
+                        description: plugin.commandDescriptions?.[cmdName] || `Execute ${cmdName}`,
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                args: { type: "string", description: "Arguments string" }
+                            }
+                        }
+                    }));
+                });
+                brain = new OpenAIBrain(apiKey, openaiTools, model || 'gpt-4o-mini');
+                break;
 
-        brain = new GeminiBrain(apiKey, pluginTools, model);
+            case 'anthropic':
+                const AnthropicBrain = require('../services/anthropic');
+                // Convert plugins to Anthropic tools format
+                const anthropicTools = pluginManager.listPlugins().filter(p => p.enabled).flatMap(p => {
+                    const plugin = pluginManager.plugins.get(p.name);
+                    return Object.keys(plugin.commands).map(cmdName => ({
+                        name: cmdName,
+                        description: plugin.commandDescriptions?.[cmdName] || `Execute ${cmdName}`,
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                args: { type: "string", description: "Arguments string" }
+                            }
+                        }
+                    }));
+                });
+                brain = new AnthropicBrain(apiKey, anthropicTools, model || 'claude-3-5-haiku-latest');
+                break;
+
+            case 'deepseek':
+                const DeepSeekBrain = require('../services/deepseek');
+                // DeepSeek uses OpenAI format
+                const deepseekTools = pluginManager.listPlugins().filter(p => p.enabled).flatMap(p => {
+                    const plugin = pluginManager.plugins.get(p.name);
+                    return Object.keys(plugin.commands).map(cmdName => ({
+                        name: cmdName,
+                        description: plugin.commandDescriptions?.[cmdName] || `Execute ${cmdName}`,
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                args: { type: "string", description: "Arguments string" }
+                            }
+                        }
+                    }));
+                });
+                brain = new DeepSeekBrain(apiKey, deepseekTools, model || 'deepseek-chat');
+                break;
+
+            case 'google':
+            default:
+                // Convert plugin commands to Gemini tool format
+                const pluginTools = pluginManager.listPlugins().filter(p => p.enabled).flatMap(p => {
+                    const plugin = pluginManager.plugins.get(p.name);
+                    return Object.keys(plugin.commands).map(cmdName => ({
+                        name: cmdName,
+                        description: plugin.commandDescriptions?.[cmdName] || `Execute ${cmdName} command`,
+                        parameters: {
+                            type: "OBJECT",
+                            properties: {
+                                args: { type: "STRING", description: "Arguments for the command" }
+                            }
+                        }
+                    }));
+                });
+                brain = new GeminiBrain(apiKey, pluginTools, model || 'gemini-2.0-flash-lite');
+                break;
+        }
+        console.log(`Initialized brain with provider: ${provider}`);
+    } else {
+        console.warn(`No API key found for provider: ${provider}`);
     }
 }
 
