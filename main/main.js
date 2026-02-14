@@ -5,12 +5,14 @@ const WhisperService = require('../services/whisper');
 const SystemActions = require('../services/system');
 const ConfigManager = require('../scripts/config-manager');
 const PluginManager = require('../scripts/plugin-manager');
+const Scheduler = require('../scripts/scheduler');
 const { CHANNELS, THEMES, COMMANDS, MESSAGES } = require('../utils/constants');
 require('dotenv').config();
 
 let mainWindow;
 let brain;
 let whisper;
+let scheduler;
 const config = new ConfigManager();
 const pluginManager = new PluginManager();
 
@@ -154,6 +156,14 @@ process.on('unhandledRejection', (reason, promise) => {
 app.whenReady().then(async () => {
     await initializeBrain();
     createWindow();
+    
+    // Initialize scheduler for background tasks
+    try {
+        scheduler = new Scheduler();
+        console.log('Scheduler initialized');
+    } catch (error) {
+        console.error('Failed to initialize scheduler:', error);
+    }
     
     // Auto-update check (runs once per day)
     try {

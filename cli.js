@@ -457,6 +457,52 @@ program
   });
 
 program
+  .command('reminders')
+  .alias('schedule')
+  .description('Manage scheduled tasks and reminders')
+  .option('-l, --list', 'List all scheduled tasks')
+  .option('-a, --add <message>', 'Quick add a reminder')
+  .option('-t, --time <time>', 'Time for the reminder (use with --add)')
+  .action(async (options) => {
+    const Scheduler = require('./scripts/scheduler');
+    const scheduler = new Scheduler();
+
+    if (options.list) {
+      const tasks = scheduler.getTasks();
+      if (tasks.length === 0) {
+        console.log(chalk.gray('\n  No scheduled tasks.\n'));
+        return;
+      }
+
+      console.log(chalk.cyan('\n⏰ Scheduled Tasks:\n'));
+      tasks.forEach(task => {
+        const status = task.enabled ? chalk.green('✓') : chalk.gray('✗');
+        const nextRun = task.enabled ? new Date(task.nextRun).toLocaleString() : 'Disabled';
+        console.log(`  ${status} ${chalk.bold(task.name)}`);
+        console.log(`    ${chalk.gray(`Next: ${nextRun}`)}\n`);
+      });
+    } else if (options.add) {
+      const time = options.time || 'in 1 hour';
+      const parsed = scheduler.parseNaturalTime(time);
+      
+      const task = scheduler.addTask({
+        name: `Reminder: ${options.add}`,
+        type: 'reminder',
+        schedule: parsed.schedule,
+        action: options.add,
+        recurring: parsed.recurring
+      });
+
+      console.log(chalk.green(`\n✓ Reminder set for ${new Date(task.nextRun).toLocaleString()}\n`));
+    } else {
+      // Interactive mode
+      const schedulerCli = require('./scripts/scheduler-cli');
+      await schedulerCli.run();
+    }
+  });
+
+
+program
   .command('startup')
   .description('Manage Echo start-on-boot settings')
   .option('-e, --enable', 'Enable Echo start on boot')

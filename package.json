@@ -24,6 +24,7 @@
     "electron": "^32.0.0",
     "electron-log": "^5.1.0",
     "inquirer": "^8.2.5",
+    "node-notifier": "^10.0.1",
     "node-record-lpcm16": "^1.0.1",
     "ora": "^5.4.1"
   },

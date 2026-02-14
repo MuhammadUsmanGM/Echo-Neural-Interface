@@ -112,6 +112,9 @@ echo docs
 | `echo docs` | Launches the Emerald Documentation Hub |
 | `echo update` | Update Echo to the latest version |
 | `echo update --check` | Check for updates without installing |
+| `echo reminders` | Manage scheduled tasks and reminders |
+| `echo reminders --list` | List all scheduled tasks |
+| `echo reminders --add "message" --time "at 3pm"` | Quick add a reminder |
 | `echo startup` | Quick toggle for Enable/Disable boot launch |
 | `echo memory` | Manage or clear your local conversational history |
 | `echo plugins` | Manage, enable, or generate new AI capabilities |
