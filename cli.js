@@ -427,6 +427,7 @@ program
   .option('-c, --clear', 'Clear all saved memory (history and facts)')
   .option('-e, --enable', 'Enable conversational memory')
   .option('-d, --disable', 'Disable conversational memory')
+  .option('-s, --search <query>', 'Search conversation history')
   .action((options) => {
     const MemoryManager = require('./scripts/memory-manager');
     const memory = new MemoryManager();
@@ -440,6 +441,20 @@ program
     } else if (options.disable) {
       config.set('memoryEnabled', false);
       console.log(chalk.yellow('⚠️  Conversational memory is now disabled.'));
+    } else if (options.search) {
+      const results = memory.searchHistory(options.search);
+      if (results.length === 0) {
+        console.log(chalk.yellow(`No results found for "${options.search}"`));
+      } else {
+        console.log(chalk.cyan(`\nFound ${results.length} matches for "${options.search}":\n`));
+        results.slice(-10).forEach(msg => {
+          const role = msg.role === 'user' ? chalk.green('You') : chalk.blue('Echo');
+          const time = new Date(msg.timestamp).toLocaleString();
+          console.log(`  [${chalk.gray(time)}] ${role}: ${msg.parts[0].text.substring(0, 100)}${msg.parts[0].text.length > 100 ? '...' : ''}`);
+        });
+        if (results.length > 10) console.log(chalk.gray(`\n...and ${results.length - 10} earlier results.`));
+        console.log('');
+      }
     } else {
       const enabled = config.get('memoryEnabled') !== false;
       console.log(chalk.cyan('\n🧠 Memory Status:'));

@@ -55,25 +55,35 @@ class MemoryManager {
      * Store a message in history
      */
     saveMessage(role, text) {
-        let history = this.getHistory();
+        let history = this.getAllHistory();
         history.push({
             role,
             parts: [{ text }],
             timestamp: new Date().toISOString()
         });
         
-        if (history.length > 50) {
-            history = history.slice(-50);
-        }
+        // No arbitrary limit on local storage
+        // history = history.slice(-50); 
         
         const encryptedData = this.encrypt(JSON.stringify(history));
         fs.writeFileSync(this.historyFile, encryptedData);
     }
 
     /**
-     * Get chat history for Gemini
+     * Get chat history for Gemini context window
+     * @param {number} limit Number of recent messages to retrieve (default: 50)
      */
-    getHistory() {
+    getHistory(limit = 50) {
+        const fullHistory = this.getAllHistory();
+        // Return only the most recent messages for the AI context window
+        // to avoid hitting token limits while preserving full history on disk
+        return fullHistory.slice(-limit);
+    }
+
+    /**
+     * Get all stored history
+     */
+    getAllHistory() {
         if (!fs.existsSync(this.historyFile)) {
             return [];
         }
@@ -82,8 +92,23 @@ class MemoryManager {
             const decryptedData = this.decrypt(encryptedData);
             return decryptedData ? JSON.parse(decryptedData) : [];
         } catch (e) {
+            console.error('Error reading history:', e);
             return [];
         }
+    }
+
+    /**
+     * Search history for keywords
+     * @param {string} query Search query
+     */
+    searchHistory(query) {
+        const history = this.getAllHistory();
+        const lowerQuery = query.toLowerCase();
+        
+        return history.filter(msg => {
+            const text = msg.parts[0].text.toLowerCase();
+            return text.includes(lowerQuery);
+        });
     }
 
     /**
