@@ -161,8 +161,16 @@ app.whenReady().then(async () => {
     try {
         scheduler = new Scheduler();
         console.log('Scheduler initialized');
+        
+        // Notify user that Echo is running in background
+        const NotificationManager = require('../scripts/notification-manager');
+        const notifier = new NotificationManager();
+        // Only notify on startup if configured (default true)
+        if (config.get('startupNotification') !== false) {
+             notifier.notifyStartup();
+        }
     } catch (error) {
-        console.error('Failed to initialize scheduler:', error);
+        console.error('Failed to initialize scheduler/notifications:', error);
     }
     
     // Auto-update check (runs once per day)

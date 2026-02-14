@@ -24,7 +24,8 @@ class ConfigManager {
         workflows: {},
         plugins: ['example-plugin', 'productivity-plugin', 'system-control-plugin', 'workflow-plugin', 'reminder-plugin'],
         autoUpdateCheck: true,
-        lastUpdateCheck: null
+        lastUpdateCheck: null,
+        startupNotification: true
       }
     });
   }

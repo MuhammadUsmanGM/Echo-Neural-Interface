@@ -209,18 +209,12 @@ class Scheduler {
     showReminder(task) {
         const message = task.action || task.name;
         
-        // Use node-notifier for cross-platform notifications
         try {
-            const notifier = require('node-notifier');
-            notifier.notify({
-                title: '⏰ Echo Reminder',
-                message: message,
-                sound: true,
-                wait: true,
-                timeout: 10
-            });
+            const NotificationManager = require('./notification-manager');
+            const notifier = new NotificationManager();
+            notifier.remind(message);
         } catch (error) {
-            // Fallback to console if node-notifier not available
+            // Fallback to console if notification fails
             console.log(`\n⏰ REMINDER: ${message}\n`);
             
             // Try system notification as fallback

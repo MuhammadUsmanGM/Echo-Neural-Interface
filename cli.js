@@ -144,6 +144,7 @@ program
               { name: '⌨️  Workflow Macros', value: 'workflows' },
               { name: '🚀 Startup Settings', value: 'startup' },
               { name: '🔄 Auto-Update Settings', value: 'autoupdate' },
+              { name: '🔔 Notification Settings', value: 'notify' },
               { name: '⚠️  Reset All Settings', value: 'reset' },
               new inquirer.Separator(),
               { name: '❌ Exit', value: 'exit' }
@@ -383,6 +384,22 @@ program
             ]);
             config.set('autoUpdateCheck', currentAutoUpdate ? !autoUpdateConfirm.enable : autoUpdateConfirm.enable);
             console.log(chalk.green(`✓ Auto-update check ${currentAutoUpdate && autoUpdateConfirm.enable ? 'disabled' : 'enabled'}.`));
+            break;
+
+          case 'notify':
+            const currentNotify = config.get('startupNotification') !== false;
+            const notifyConfirm = await inquirer.prompt([
+                {
+                    type: 'confirm',
+                    name: 'enable',
+                    message: currentNotify 
+                        ? 'Startup notifications are enabled. Would you like to disable them?' 
+                        : 'Would you like Echo to notify you when it starts up?',
+                    default: !currentNotify
+                }
+            ]);
+            config.set('startupNotification', currentNotify ? !notifyConfirm.enable : notifyConfirm.enable);
+            console.log(chalk.green(`✓ Startup notifications ${currentNotify && notifyConfirm.enable ? 'disabled' : 'enabled'}.`));
             break;
             
           case 'workflows':
