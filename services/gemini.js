@@ -43,7 +43,7 @@ class GeminiBrain {
         });
     }
 
-    async processCommand(userInput) {
+    async processCommand(userInput, onProgress) {
         const memoryEnabled = this.config.get('memoryEnabled') !== false;
         let history = [];
         
@@ -58,46 +58,65 @@ class GeminiBrain {
         });
 
         try {
-            // Save user message to memory
+            // Use streaming API
+            const result = await chat.sendMessageStream(userInput);
+            
+            let fullText = '';
+            let functionCall = null;
+            
             if (memoryEnabled) {
                 this.memory.saveMessage('user', userInput);
             }
 
-            const result = await chat.sendMessage(userInput);
-            const response = result.response;
-            const responseText = response.text();
-            
-            // Save model response to memory
-            if (memoryEnabled) {
-                this.memory.saveMessage('model', responseText);
+            for await (const chunk of result.stream) {
+                const chunkText = chunk.text();
+                // Check if it's a function call (Gemini usually sends this in one go, but we check parts)
+                const calls = chunk.functionCalls();
+                
+                if (calls && calls.length > 0) {
+                    functionCall = calls[0];
+                    break; // Stop streaming text if it's a tool call
+                }
+                
+                if (chunkText) {
+                    fullText += chunkText;
+                    if (onProgress) onProgress(chunkText);
+                }
             }
-            
-            // Handle tool calls
-            const calls = response.functionCalls();
-            if (calls && calls.length > 0) {
-                const call = calls[0];
-                
-                // Check if it's a dynamic plugin tool (not the base system command)
-                const isBaseTool = call.name === "execute_system_command";
-                
+
+            // Handle Function Calls
+            if (functionCall) {
+                const call = functionCall;
+                const fnName = call.name;
+                const args = call.args;
+
+                // Save model thought/intent if any text preceded the tool call
+                if (fullText && memoryEnabled) {
+                    this.memory.saveMessage('model', fullText);
+                }
+
                 return {
-                    type: isBaseTool ? 'action' : 'plugin_action',
-                    command: call.name === "execute_system_command" ? call.args.command : call.name,
-                    args: call.args.args || call.args, // Handle different arg structures
-                    text: "Processing your request, sir."
+                    type: 'action', // or plugin_action logic
+                    command: fnName,
+                    args: args, // Gemini args are already an object
+                    text: fullText || "Processing action..."
                 };
+            }
+
+            // Save final response
+            if (memoryEnabled) {
+                this.memory.saveMessage('model', fullText);
             }
 
             return {
                 type: 'speech',
-                text: response.text()
+                text: fullText
             };
+
         } catch (error) {
-            console.error("Gemini Processing Error:", error);
-            return {
-                type: 'speech',
-                text: "I apologize, sir. I'm having trouble connecting to my neural network right now."
-            };
+            console.error("Gemini Error:", error);
+            // Fallback for non-streaming or errors
+            return { success: false, text: "I encountered an error processing that, sir." };
         }
     }
 }

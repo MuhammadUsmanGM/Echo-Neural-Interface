@@ -432,6 +432,55 @@ class VoiceEngine {
 const voiceEngine = new VoiceEngine();
 voiceEngine.init();
 
+// ==================== STREAMING & INPUT HANDLING ====================
+
+// NOTE: Streaming listener is now handled at the end of the file by TTSManager integration
+
+// Global processInput function used by UI
+async function processInput(text) {
+    if (!text.trim()) return;
+    
+    // Clear streaming state
+    const output = document.getElementById('output');
+    output.dataset.streaming = 'false';
+    output.classList.remove('streaming');
+
+    updateStatus('Processing...', 'active');
+    
+    // Backup in case we want to show history but effectively clear for stream
+    output.textContent = ''; 
+
+    try {
+        const result = await window.electronAPI.processInput(text);
+        
+        updateStatus('Ready', 'idle');
+        
+        // If streaming happened, the text is already there. 
+        // We just ensure the final state matches.
+        if (output.dataset.streaming === 'true') {
+                output.dataset.streaming = 'false';
+                output.classList.remove('streaming');
+        } else {
+                // Fallback if no stream events were received (non-streaming provider)
+                output.textContent = result.text;
+        }
+
+        // Only speak if we haven't been speaking during stream
+        if (result.success && !synth.speaking) {
+                speak(result.text);
+        }
+
+        if (result.action) {
+            console.log('Action executed:', result.action);
+        }
+
+    } catch (error) {
+        updateStatus('Error', 'error');
+        output.textContent = "Error processing command.";
+        console.error(error);
+    }
+}
+
 async function handleVoiceCommand(text) {
     statusLabel.innerText = "ANALYZING";
     statusText.innerText = "PROCESSING DATA...";
@@ -468,73 +517,175 @@ async function handleVoiceCommand(text) {
     }
 }
 
-function speakResponse(text) {
-    if (window.speechSynthesis.speaking) {
+// ==================== STREAMING TTS MANAGER ====================
+class TTSManager {
+    constructor() {
+        this.queue = [];
+        this.isPlaying = false;
+        this.buffer = '';
+        this.sentenceEndings = /[.!?。]/; // Delimiters
+    }
+
+    reset() {
+        this.queue = [];
+        this.isPlaying = false;
+        this.buffer = '';
         window.speechSynthesis.cancel();
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    const setVoice = () => {
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoices = [
-            'Google UK English Male',
-            'Microsoft David',
-            'Google US English',
-            'Alex',
-            'Daniel'
-        ];
-        
-        for (let voiceName of preferredVoices) {
-            const voice = voices.find(v => v.name.includes(voiceName));
-            if (voice) {
-                utterance.voice = voice;
-                break;
-            }
-        }
-    };
-    
-    if (window.speechSynthesis.getVoices().length) {
-        setVoice();
-    } else {
-        window.speechSynthesis.onvoiceschanged = setVoice;
+    feed(text) {
+        this.buffer += text;
+        this.processBuffer();
     }
 
-    utterance.pitch = 0.95;
-    utterance.rate = 1.05;
-    utterance.volume = 1.0;
-
-    utterance.onend = () => {
-        echoContainer.classList.remove('talking');
-        statusLabel.innerText = "LISTENING_AGENT";
-        statusText.innerText = "AWAITING INPUT...";
+    processBuffer() {
+        // Find the index of the first sentence delimiter
+        let match = this.buffer.match(this.sentenceEndings);
         
-        rotationSpeedX = 0.003;
-        rotationSpeedY = 0.004;
-        
-        if (voiceEngine && !isEchoSpeaking) {
-            voiceEngine.start(voiceEngine.stream);
-        }
-    };
-
-    let ttsInterval;
-    const startTTSVisualization = () => {
-        isEchoSpeaking = true;
-        ttsInterval = setInterval(() => {
-            if (window.speechSynthesis.speaking) {
-                targetAudioLevel = 50 + Math.random() * 70;
-                targetBassLevel = 30 + Math.random() * 40;
-            } else {
-                clearInterval(ttsInterval);
-                targetAudioLevel = 0;
-                targetBassLevel = 0;
-                isEchoSpeaking = false;
+        while (match) {
+            const index = match.index + 1; // Include the delimiter
+            const sentence = this.buffer.substring(0, index).trim();
+            this.buffer = this.buffer.substring(index);
+            
+            if (sentence.length > 0) {
+                this.addToQueue(sentence);
             }
-        }, 80);
-    };
+            
+            // Look for next delimiter
+            match = this.buffer.match(this.sentenceEndings);
+        }
+    }
 
-    startTTSVisualization();
-    window.speechSynthesis.speak(utterance);
+    flush() {
+        if (this.buffer.trim().length > 0) {
+            this.addToQueue(this.buffer.trim());
+            this.buffer = '';
+        }
+    }
+
+    addToQueue(text) {
+        this.queue.push(text);
+        if (!this.isPlaying) {
+            this.playNext();
+        }
+    }
+
+    playNext() {
+        if (this.queue.length === 0) {
+            this.isPlaying = false;
+            // Stop animation if queue is empty
+            return;
+        }
+
+        this.isPlaying = true;
+        const text = this.queue.shift();
+        this.speak(text);
+    }
+
+    speak(text) {
+        // Start visuals
+        if (!isEchoSpeaking) startTTSVisualization();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // Voice selection logic re-used
+        const setVoice = () => {
+            const voices = window.speechSynthesis.getVoices();
+            const preferredVoices = ['Google UK English Male', 'Microsoft David', 'Google US English', 'Alex'];
+            for (let voiceName of preferredVoices) {
+                const voice = voices.find(v => v.name.includes(voiceName));
+                if (voice) { utterance.voice = voice; break; }
+            }
+        };
+        
+        if (window.speechSynthesis.getVoices().length) setVoice();
+        
+        utterance.pitch = 0.95;
+        utterance.rate = 1.05;
+        utterance.volume = 1.0;
+
+        utterance.onend = () => {
+             // Check if we have more to say, otherwise stop visuals
+             if (this.queue.length === 0) {
+                 stopTTSVisuals();
+             }
+             this.playNext();
+        };
+
+        utterance.onerror = (e) => {
+            console.error("TTS Error:", e);
+            this.playNext();
+        };
+
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
+const ttsManager = new TTSManager();
+let ttsVisualizationInterval;
+
+function startTTSVisualization() {
+    isEchoSpeaking = true;
+    echoContainer.classList.add('talking');
+    statusLabel.innerText = "SYSTEM_ACTIVE";
+    statusText.innerText = "TRANSMITTING RESPONSE";
+    
+    // Clear existing interval if any
+    if (ttsVisualizationInterval) clearInterval(ttsVisualizationInterval);
+
+    ttsVisualizationInterval = setInterval(() => {
+        targetAudioLevel = 50 + Math.random() * 70;
+        targetBassLevel = 30 + Math.random() * 40;
+    }, 80);
+}
+
+function stopTTSVisuals() {
+    if (ttsVisualizationInterval) clearInterval(ttsVisualizationInterval);
+    targetAudioLevel = 0;
+    targetBassLevel = 0;
+    isEchoSpeaking = false;
+    echoContainer.classList.remove('talking');
+    statusLabel.innerText = "LISTENING_AGENT";
+    statusText.innerText = "AWAITING INPUT...";
+    
+    rotationSpeedX = 0.003;
+    rotationSpeedY = 0.004;
+
+    // Restart listening if needed
+    if (voiceEngine && !voiceEngine.isRecording) {
+        voiceEngine.start(voiceEngine.stream);
+    }
+}
+
+// Re-implement speakResponse as a fallback wrapper
+function speakResponse(text) {
+    if (ttsManager.isPlaying) {
+        // Already handling via stream, ignore final block
+        return;
+    }
+    // Fallback for non-streaming calls
+    ttsManager.reset();
+    ttsManager.addToQueue(text);
+}
+
+// Update Streaming Handler
+if (window.electronAPI) {
+    window.electronAPI.onStreamText((text) => {
+        const output = document.getElementById('output');
+        
+        // Visuals
+        if (output.dataset.streaming !== 'true') {
+            output.textContent = '';
+            output.dataset.streaming = 'true';
+            output.classList.add('streaming');
+            ttsManager.reset(); // New response starting
+        }
+        output.textContent += text;
+        output.scrollTop = output.scrollHeight;
+        
+        // Feed TTS
+        ttsManager.feed(text);
+    });
 }
 
 // ENHANCED: Audio visualizer with frequency band separation

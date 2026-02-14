@@ -336,52 +336,67 @@ ipcMain.handle('process-input', async (event, text) => {
     if (!brain) return { success: false, text: "API Key missing. Please run 'echo setup' first." };
     
     try {
-        const response = await brain.processCommand(text);
-        
-        if (response.type === 'action') {
-            // Execute the system action
-            let result;
-            const cmd = response.command.toLowerCase();
-            const argsStr = Array.isArray(response.args) ? response.args.join(' ') : response.args;
+        // Stream progress callback
+        const onProgress = (chunk) => {
+            event.sender.send('stream-text', chunk);
+        };
 
-            // Enhanced command routing
-            if (cmd.includes('chrome') || cmd.includes('search') || cmd.includes('web')) {
-                result = await SystemActions.searchWeb(argsStr || text);
-            } else if (cmd.includes('mkdir') || cmd.includes('folder')) {
-                result = await SystemActions.createFolder(argsStr || "New Folder");
-            } else if (cmd.includes('screenshot')) {
-                result = await SystemActions.takeScreenshot();
-            } else if (cmd.includes('system') || cmd.includes('info')) {
-                result = SystemActions.getSystemInfo();
-            } else if (cmd.includes('time') || cmd.includes('date')) {
-                result = SystemActions.getDateTime();
-            } else if (cmd.includes('list') || cmd.includes('files')) {
-                result = await SystemActions.listFiles(argsStr);
-            } else if (cmd.includes('copy')) {
-                const [source, dest] = argsStr.split(' to ');
-                result = await SystemActions.copyFile(source, dest);
-            } else if (cmd.includes('delete')) {
-                result = await SystemActions.deleteFile(argsStr);
-            } else if (cmd.includes('url') || cmd.includes('open')) {
-                result = await SystemActions.openUrl(argsStr);
-            } else {
-                result = await SystemActions.openApp(cmd);
-            }
-            
-            return { success: true, text: response.text || "Action completed, sir.", action: response.command };
+        const response = await brain.processCommand(text, onProgress);
         
-        } else if (response.type === 'plugin_action') {
-            // Execute plugin command
-            const result = await pluginManager.executeCommand(response.command, response.args);
-            
-            if (result.success) {
-                return { success: true, text: result.result.message || "Plugin executed successfully.", action: response.command };
+        let result = { success: true, text: response.text, action: null };
+
+        if (response.type === 'action' || response.type === 'plugin_action') {
+            const cmd = response.command; // .toLowerCase() removed to preserve case for plugins
+            const args = response.args;
+            const isBaseTool = response.type === 'action'; // Based on previous logic, 'action' is system
+
+            // Execute action
+            if (isBaseTool) {
+                // ... (Existing SystemActions logic) ...
+                // Re-implementing concise routing for clarity and safety
+                let actionResult;
+                const lowerCmd = cmd.toLowerCase();
+                const argsStr = Array.isArray(args) ? args.join(' ') : args;
+
+                if (lowerCmd.includes('chrome') || lowerCmd.includes('search') || lowerCmd.includes('web')) {
+                    actionResult = await SystemActions.searchWeb(argsStr || text);
+                } else if (lowerCmd.includes('mkdir') || lowerCmd.includes('folder')) {
+                    actionResult = await SystemActions.createFolder(argsStr || "New Folder");
+                } else if (lowerCmd.includes('screenshot')) {
+                    actionResult = await SystemActions.takeScreenshot();
+                } else if (lowerCmd.includes('system') || lowerCmd.includes('info')) {
+                    actionResult = SystemActions.getSystemInfo();
+                } else if (lowerCmd.includes('time') || lowerCmd.includes('date')) {
+                    actionResult = SystemActions.getDateTime();
+                } else if (lowerCmd.includes('list') || lowerCmd.includes('files')) {
+                    actionResult = await SystemActions.listFiles(argsStr);
+                } else if (lowerCmd.includes('copy')) {
+                    const [source, dest] = argsStr.split(' to ');
+                    actionResult = await SystemActions.copyFile(source, dest);
+                } else if (lowerCmd.includes('delete')) {
+                    actionResult = await SystemActions.deleteFile(argsStr);
+                } else if (lowerCmd.includes('url') || lowerCmd.includes('open') && lowerCmd.includes('http')) {
+                    actionResult = await SystemActions.openUrl(argsStr);
+                } else {
+                    actionResult = await SystemActions.openApp(cmd);
+                }
+                
+                result.text = response.text || "Action completed, sir.";
+                result.action = cmd;
             } else {
-                return { success: false, text: `Plugin error: ${result.error}` };
+                // Plugin Action
+                const pluginResult = await pluginManager.executeCommand(cmd, args);
+                if (pluginResult.success) {
+                    result.text = pluginResult.result.message || "Plugin executed successfully.";
+                    result.action = cmd;
+                } else {
+                    result.success = false;
+                    result.text = `Plugin error: ${pluginResult.error}`;
+                }
             }
         }
         
-        return { success: true, text: response.text };
+        return result;
     } catch (error) {
         console.error("Gemini Error:", error);
         return { success: false, text: "I encountered an error processing that, sir." };
