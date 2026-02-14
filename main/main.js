@@ -346,38 +346,62 @@ ipcMain.handle('process-input', async (event, text) => {
         let result = { success: true, text: response.text, action: null };
 
         if (response.type === 'action' || response.type === 'plugin_action') {
-            const cmd = response.command; // .toLowerCase() removed to preserve case for plugins
+            const cmd = response.command; 
             const args = response.args;
-            const isBaseTool = response.type === 'action'; // Based on previous logic, 'action' is system
+            const isBaseTool = response.type === 'action';
 
-            // Execute action
             if (isBaseTool) {
-                // ... (Existing SystemActions logic) ...
-                // Re-implementing concise routing for clarity and safety
                 let actionResult;
                 const lowerCmd = cmd.toLowerCase();
-                const argsStr = Array.isArray(args) ? args.join(' ') : args;
-
-                if (lowerCmd.includes('chrome') || lowerCmd.includes('search') || lowerCmd.includes('web')) {
-                    actionResult = await SystemActions.searchWeb(argsStr || text);
+                
+                // Handle Structured Commands (New)
+                if (lowerCmd === 'create_folder') {
+                    const path = args.path || (Array.isArray(args) ? args[0] : args);
+                    actionResult = await SystemActions.createFolder(path);
+                } else if (lowerCmd === 'write_file') {
+                    const path = args.path;
+                    const content = args.content;
+                    if (path && content) {
+                         actionResult = await SystemActions.writeFile(path, content);
+                    } else {
+                         actionResult = { success: false, error: 'Missing path or content' };
+                    }
+                } else if (lowerCmd === 'read_file') {
+                     const path = args.path || (Array.isArray(args) ? args[0] : args);
+                     actionResult = await SystemActions.readFile(path);
+                     if (actionResult.success) {
+                         // Send content back to AI? For now just log/notify
+                         console.log("File content read:", actionResult.content.substring(0, 50) + "...");
+                     }
+                } else if (lowerCmd === 'run_terminal_command') {
+                     const termCmd = args.command || args;
+                     actionResult = await SystemActions.executeCommand(termCmd);
+                } else if (lowerCmd === 'type_text') {
+                     const InputController = require('../scripts/input-controller');
+                     const textToType = args.text || args;
+                     await InputController.type(textToType);
+                     actionResult = { success: true };
+                } else if (lowerCmd === 'press_key') {
+                     const InputController = require('../scripts/input-controller');
+                     const keyToPress = args.key || args;
+                     await InputController.press(keyToPress);
+                     actionResult = { success: true };
+                }
+                // Handle Legacy/Flexible Commands
+                else if (lowerCmd.includes('chrome') || lowerCmd.includes('search') || lowerCmd.includes('web') || lowerCmd === 'web_search') {
+                    const query = args.query || (Array.isArray(args) ? args.join(' ') : args) || text;
+                    actionResult = await SystemActions.searchWeb(query);
                 } else if (lowerCmd.includes('mkdir') || lowerCmd.includes('folder')) {
-                    actionResult = await SystemActions.createFolder(argsStr || "New Folder");
+                    const path = Array.isArray(args) ? args.join(' ') : args;
+                    actionResult = await SystemActions.createFolder(path || "New Folder");
                 } else if (lowerCmd.includes('screenshot')) {
                     actionResult = await SystemActions.takeScreenshot();
                 } else if (lowerCmd.includes('system') || lowerCmd.includes('info')) {
                     actionResult = SystemActions.getSystemInfo();
                 } else if (lowerCmd.includes('time') || lowerCmd.includes('date')) {
                     actionResult = SystemActions.getDateTime();
-                } else if (lowerCmd.includes('list') || lowerCmd.includes('files')) {
-                    actionResult = await SystemActions.listFiles(argsStr);
-                } else if (lowerCmd.includes('copy')) {
-                    const [source, dest] = argsStr.split(' to ');
-                    actionResult = await SystemActions.copyFile(source, dest);
-                } else if (lowerCmd.includes('delete')) {
-                    actionResult = await SystemActions.deleteFile(argsStr);
-                } else if (lowerCmd.includes('url') || lowerCmd.includes('open') && lowerCmd.includes('http')) {
-                    actionResult = await SystemActions.openUrl(argsStr);
                 } else {
+                    // Fallback to open app
                     actionResult = await SystemActions.openApp(cmd);
                 }
                 
@@ -398,7 +422,7 @@ ipcMain.handle('process-input', async (event, text) => {
         
         return result;
     } catch (error) {
-        console.error("Gemini Error:", error);
+        console.error("Processing Error:", error);
         return { success: false, text: "I encountered an error processing that, sir." };
     }
 });

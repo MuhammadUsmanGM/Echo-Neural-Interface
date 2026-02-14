@@ -89,6 +89,28 @@ const SystemActions = {
         });
     },
 
+    writeFile: (filePath, content) => {
+        return new Promise((resolve) => {
+            const fullPath = path.isAbsolute(filePath) 
+                ? filePath 
+                : path.join(os.homedir(), 'Desktop', filePath);
+
+            fs.writeFile(fullPath, content, 'utf8', (err) => {
+                if (err) resolve({ success: false, error: err.message });
+                else resolve({ success: true, path: fullPath });
+            });
+        });
+    },
+
+    readFile: (filePath) => {
+        return new Promise((resolve) => {
+            fs.readFile(filePath, 'utf8', (err, data) => {
+                if (err) resolve({ success: false, error: err.message });
+                else resolve({ success: true, content: data });
+            });
+        });
+    },
+
     // System information
     getSystemInfo: () => {
         return {
@@ -136,14 +158,13 @@ const SystemActions = {
         });
     },
 
-    // Get current time/date
+    // Get current date and time
     getDateTime: () => {
-        const now = new Date();
         return {
             success: true,
-            date: now.toLocaleDateString(),
-            time: now.toLocaleTimeString(),
-            timestamp: now.toISOString()
+            date: new Date().toLocaleDateString(),
+            time: new Date().toLocaleTimeString(),
+            timestamp: Date.now()
         };
     },
 

@@ -12,12 +12,12 @@ class GeminiBrain {
         this.baseTools = [
             {
                 name: "execute_system_command",
-                description: "Execute a system action or shell command on the user's computer",
+                description: "Execute a system action or request",
                 parameters: {
                     type: "OBJECT",
                     properties: {
-                        command: { type: "STRING", description: "The command to run (e.g., 'start chrome', 'mkdir test', 'screenshot')" },
-                        args: { type: "ARRAY", items: { type: "STRING" }, description: "Arguments for the command" }
+                        command: { type: "STRING", description: "The action to perform: 'create_folder', 'write_file', 'read_file', 'open_app', 'web_search', 'screenshot', 'system_info', 'run_terminal_command', 'type_text', 'press_key'" },
+                        args: { type: "OBJECT", description: "Arguments (e.g. { command: 'git status' } or { text: 'Hello' } or { key: 'ENTER' })" }
                     },
                     required: ["command"]
                 }
@@ -36,10 +36,11 @@ class GeminiBrain {
                                `Your personality is professional, slightly witty, and exceptionally helpful. ` +
                                `The person you are assisting is named ${userName}. Use this name naturally in conversation. ` +
                                `You have control over the user's system and can perform various tasks like opening apps, managing files, and searching the web. ` +
+                               `CRITICAL SAFETY RULE: You are authorized to run terminal commands via 'run_terminal_command' ONLY when the user EXPLICITLY asks you to run a specific command or perform an action that requires it. ` +
+                               `Never execute arbitrary commands autonomously or guess. If unsure, ask for confirmation. ` +
                                `You also have access to external plugins if available. ` +
                                `Keep your spoken responses concise, elegant, and ready for text-to-speech. ` +
-                               `If a user asks for 'help' or 'what can you do', list your capabilities briefly: creating folders, searching the web, system info, taking screenshots, and any loaded plugins. ` +
-                               `If a user asks for something outside your direct control, check if a plugin tool is available.`
+                               `If a user asks for 'help' or 'what can you do', list your capabilities briefly: creating folders, searching the web, system info, taking screenshots, running terminal commands (upon request), and shortcuts.`
         });
     }
 
