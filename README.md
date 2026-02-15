@@ -20,22 +20,26 @@
 ## ✨ Features
 
 ### 🎨 **Holographic Emerald Interface**
+
 - **State-of-the-Art Visuals**: A stunning, liquid-morphic core with real-time neural connection animations.
 - **Dynamic Physics**: 2,000+ particles reacting to your voice with frequency-band separation (Bass/Mid).
 - **Glassmorphic HUD**: High-fidelity sci-fi framing with animated scanning lines and radar pings.
 - **Global Hotkeys**: Summon your agent instantly with `Ctrl + Shift + E`.
 
 ### 🧠 **Multi-Model Intelligence**
+
 - **Adaptable Brains**: Switch between **Google Gemini**, **OpenAI GPT-4o**, **Anthropic Claude**, and **DeepSeek**.
 - **Contextual Memory**: Locally encrypted conversational history that allows Echo to learn about you while keeping your data private.
 - **Function Calling**: Seamless system integration—open apps, search the web, manage files, and execute shell commands.
 
 ### 🎙️ **Voice Engine Excellence**
+
 - **Hybrid STT Layer**: Choose between **Browser API** (Fast/Free), **Whisper Cloud** (Top Accuracy), and **Whisper Local** (100% Private, Free).
 - **Neural TTS**: High-fidelity speech synthesis with multiple premium voice profiles.
 - **VAD Intelligence**: Smart silence detection that automatically transcribes audio once you finish speaking.
 
 ### 🛡️ **Privacy & Performance**
+
 - **Local-First Design**: Echo respects your hardware. Choose to run manually or enable "Neural Hook" (Start on Boot).
 - **Data Sovereignty**: Encrypted local persistence for all personal memories and configuration data.
 - **Lightweight Footprint**: Optimized resource management ensures low RAM usage even on modest devices.
@@ -71,6 +75,7 @@ echo setup
 ```
 
 The wizard will securely configure:
+
 1.  **AI Brain**: Your choice of provider (Gemini, OpenAI, Claude, DeepSeek).
 2.  **Voice Engine**: Select from Browser, Cloud Whisper, or Local Whisper.
 3.  **Digital Identity**: Your name and personalization preferences.
