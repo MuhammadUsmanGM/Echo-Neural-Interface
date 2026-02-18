@@ -131,7 +131,7 @@ async function initializeBrain() {
 
 function createWindow() {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-    
+
     // Get user preferences
     const windowSize = config.getWindowSize(config.get('size') || 'medium');
     const position = config.getWindowPosition(
@@ -145,7 +145,7 @@ function createWindow() {
     // Apply start on boot setting
     app.setLoginItemSettings({
         openAtLogin: startOnBoot,
-        path: app.getPath('exe') // Correct specialized path for packaged app
+        path: app.getPath('exe')
     });
 
     mainWindow = new BrowserWindow({
@@ -163,7 +163,11 @@ function createWindow() {
         },
         skipTaskbar: true,
         resizable: true,
-        hasShadow: false
+        hasShadow: true,
+        minWidth: 280,
+        minHeight: 380,
+        maxWidth: 500,
+        maxHeight: 650
     });
 
     mainWindow.loadFile(path.join(__dirname, '../ui/index.html'));

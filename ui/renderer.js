@@ -4,16 +4,22 @@ const echoContainer = document.querySelector('.echo-container');
 const canvas = document.getElementById('particle-canvas');
 const ctx = canvas.getContext('2d');
 
-// Canvas Setup with Hi-DPI support
+// Canvas Setup with Hi-DPI support - Dynamic sizing based on CSS
 let width, height, dpr;
 function resize() {
     dpr = window.devicePixelRatio || 1;
-    width = canvas.width = 300 * dpr;
-    height = canvas.height = 300 * dpr;
-    canvas.style.width = '300px';
-    canvas.style.height = '300px';
+    // Get actual rendered size from CSS
+    const rect = canvas.getBoundingClientRect();
+    width = canvas.width = rect.width * dpr;
+    height = canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
     ctx.scale(dpr, dpr);
+    
+    // Update particle system sphere radius based on canvas size
+    SPHERE_RADIUS = Math.min(rect.width, rect.height) / 2.5;
 }
+
 resize();
 window.addEventListener('resize', resize);
 
@@ -35,7 +41,7 @@ function hexToRgb(hex) {
 // ==================== PREMIUM PARTICLE SYSTEM ====================
 const particles = [];
 const PARTICLE_COUNT = 2000;
-const SPHERE_RADIUS = 85;
+let SPHERE_RADIUS = 85;
 const CONNECTION_DISTANCE = 45; // For neural network connections
 
 class Particle {
@@ -48,22 +54,22 @@ class Particle {
         // Fibonacci sphere distribution for even particle placement
         const phi = Math.acos(1 - 2 * (i + 0.5) / PARTICLE_COUNT);
         const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-        
+
         this.x = SPHERE_RADIUS * Math.sin(phi) * Math.cos(theta);
         this.y = SPHERE_RADIUS * Math.sin(phi) * Math.sin(theta);
         this.z = SPHERE_RADIUS * Math.cos(phi);
-        
+
         this.baseX = this.x;
         this.baseY = this.y;
         this.baseZ = this.z;
-        
+
         this.size = Math.random() * 1.8 + 0.4;
         this.baseSize = this.size;
-        
+
         // Use current theme color with variations
         const { r, g, b } = currentTheme;
         const colorVariant = Math.random();
-        
+
         if (colorVariant > 0.85) {
             // Brighter emerald
             this.color = `rgba(${Math.min(255, r + 100)}, ${Math.min(255, g + 55)}, ${b}, `;
@@ -74,9 +80,9 @@ class Particle {
             // Deeper emerald
             this.color = `rgba(${Math.max(0, r - 20)}, ${g}, ${b}, `;
         }
-        
+
         this.offset = Math.random() * Math.PI * 2;
-        
+
         // NEW: For neural connections
         this.connections = [];
     }
@@ -85,7 +91,7 @@ class Particle {
         // 3D rotation math
         let tempY = this.baseY * Math.cos(rotationX) - this.baseZ * Math.sin(rotationX);
         let tempZ = this.baseY * Math.sin(rotationX) + this.baseZ * Math.cos(rotationX);
-        
+
         let tempX = this.baseX * Math.cos(rotationY) - tempZ * Math.sin(rotationY);
         tempZ = this.baseX * Math.sin(rotationY) + tempZ * Math.cos(rotationY);
 
@@ -93,39 +99,43 @@ class Particle {
         const waveFreq1 = 0.08;
         const waveFreq2 = 0.12;
         const waveSpeed = 0.003;
-        
+
         // Bass frequencies affect amplitude more
         const baseAmplitude = 15 + (audioLevel * 0.6) + (bassLevel * 0.8);
-        
+
         const wave1 = Math.sin(tempY * waveFreq1 + time * waveSpeed + this.offset) * baseAmplitude;
         const wave2 = Math.cos(tempX * waveFreq2 + time * waveSpeed * 1.3) * baseAmplitude * 0.7;
         const wave3 = Math.sin((tempX + tempY) * 0.05 + time * waveSpeed * 0.8) * baseAmplitude * 0.5;
-        
+
         const totalWave = (wave1 + wave2 + wave3) / 3;
         const distortion = 1 + (totalWave / 300);
-        
+
         this.x = tempX * distortion;
         this.y = tempY * distortion;
         this.z = tempZ * distortion;
-        
+
         // Perspective projection
         const perspective = 400;
         const scale = perspective / (perspective + this.z);
-        
-        this.screenX = 150 + this.x * scale;
-        this.screenY = 150 + this.y * scale;
-        
+
+        // Center point (adaptive based on canvas size)
+        const centerX = width / (dpr * 2);
+        const centerY = height / (dpr * 2);
+
+        this.screenX = centerX + this.x * scale;
+        this.screenY = centerY + this.y * scale;
+
         const depthScale = scale * (1 + audioLevel / 200);
         this.screenSize = this.baseSize * depthScale;
-        
+
         // Brightness calculation
         const depthBrightness = (this.z + SPHERE_RADIUS) / (SPHERE_RADIUS * 2);
         const waveBrightness = (totalWave + baseAmplitude * 2) / (baseAmplitude * 4);
         const audioBrightness = audioLevel / 100;
-        
-        this.screenAlpha = Math.min(0.9, Math.max(0.15, 
-            depthBrightness * 0.4 + 
-            waveBrightness * 0.3 + 
+
+        this.screenAlpha = Math.min(0.9, Math.max(0.15,
+            depthBrightness * 0.4 +
+            waveBrightness * 0.3 +
             audioBrightness * 0.3
         ));
     }
