@@ -122,7 +122,7 @@ program
       console.log(chalk.yellow('⚠️  Echo will no longer start on boot.'));
     } else {
       // Interactive Mode
-      const { default: inquirer } = require('inquirer');
+      const inquirer = require('inquirer');
 
       const mainMenu = async () => {
         console.log(chalk.cyan.bold('\n⚙️  Echo Configuration Management\n'));

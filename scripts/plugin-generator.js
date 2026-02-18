@@ -1,4 +1,4 @@
-const { default: inquirer } = require('inquirer');
+const inquirer = require('inquirer');
 const chalk = require('chalk');
 const fs = require('fs');
 const path = require('path');

@@ -1,6 +1,6 @@
 const ConfigManager = require('./config-manager');
 const chalk = require('chalk');
-const { default: inquirer } = require('inquirer');
+const inquirer = require('inquirer');
 
 const config = new ConfigManager();
 
