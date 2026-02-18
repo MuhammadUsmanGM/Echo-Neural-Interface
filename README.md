@@ -75,7 +75,6 @@ echo setup
 ```
 
 The wizard will securely configure:
-
 1.  **AI Brain**: Your choice of provider (Gemini, OpenAI, Claude, DeepSeek).
 2.  **Voice Engine**: Select from Browser, Cloud Whisper, or Local Whisper.
 3.  **Digital Identity**: Your name and personalization preferences.

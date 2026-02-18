@@ -41,7 +41,7 @@ class OpenAIBrain {
         this.allTools = [...this.baseTools, ...this.customTools];
     }
 
-    async processCommand(userInput) {
+    async processCommand(userInput, onProgress) {
         const memoryEnabled = this.config.get('memoryEnabled') !== false;
         let messages = [];
 
@@ -62,9 +62,9 @@ class OpenAIBrain {
                 // Map Gemini format (parts[0].text) to OpenAI format
                 const content = msg.parts && msg.parts[0] ? msg.parts[0].text : "";
                 if (content) {
-                    messages.push({ 
-                        role: msg.role === 'model' ? 'assistant' : 'user', 
-                        content: content 
+                    messages.push({
+                        role: msg.role === 'model' ? 'assistant' : 'user',
+                        content: content
                     });
                 }
             });
@@ -79,34 +79,31 @@ class OpenAIBrain {
                 this.memory.saveMessage('user', userInput);
             }
 
-            const response = await this.callOpenAI(messages, this.allTools);
-            const choice = response.choices[0];
-            const message = choice.message;
+            const response = await this.callOpenAIStream(messages, this.allTools, onProgress);
 
             // Handle Tool Calls
-            if (message.tool_calls) {
-                const toolCall = message.tool_calls[0];
-                const functionName = toolCall.function.name;
-                const args = JSON.parse(toolCall.function.arguments);
+            if (response.toolCall) {
+                const functionName = response.toolCall.name;
+                const args = response.toolCall.args;
 
                 const isBaseTool = functionName === "execute_system_command";
-                
+
                 // Save rudimentary "thinking" response
-                if (memoryEnabled && message.content) {
-                    this.memory.saveMessage('model', message.content);
+                if (memoryEnabled && response.text) {
+                    this.memory.saveMessage('model', response.text);
                 }
 
                 return {
                     type: isBaseTool ? 'action' : 'plugin_action',
                     command: isBaseTool ? args.command : functionName,
                     args: isBaseTool ? (args.args || []) : args,
-                    text: message.content || "Processing your request, sir."
+                    text: response.text || "Processing your request, sir."
                 };
             }
 
             // Normal Text Response
-            const responseText = message.content;
-            
+            const responseText = response.text;
+
             if (memoryEnabled) {
                 this.memory.saveMessage('model', responseText);
             }
@@ -125,13 +122,14 @@ class OpenAIBrain {
         }
     }
 
-    callOpenAI(messages, tools) {
+    callOpenAIStream(messages, tools, onProgress) {
         return new Promise((resolve, reject) => {
             const data = JSON.stringify({
                 model: this.modelName,
                 messages: messages,
                 tools: tools,
-                tool_choice: "auto"
+                tool_choice: "auto",
+                stream: true
             });
 
             const options = {
@@ -145,19 +143,79 @@ class OpenAIBrain {
                 }
             };
 
+            let fullText = '';
+            let toolCall = null;
+            let currentToolCall = { name: '', args: '' };
+
             const req = https.request(options, (res) => {
-                let body = '';
-                res.on('data', chunk => body += chunk);
-                res.on('end', () => {
-                    if (res.statusCode >= 200 && res.statusCode < 300) {
-                        try {
-                            resolve(JSON.parse(body));
-                        } catch (e) {
-                            reject(e);
+                if (res.statusCode < 200 || res.statusCode >= 300) {
+                    let errorBody = '';
+                    res.on('data', chunk => errorBody += chunk);
+                    res.on('end', () => {
+                        reject(new Error(`OpenAI API Error: ${res.statusCode} ${errorBody}`));
+                    });
+                    return;
+                }
+
+                res.on('data', chunk => {
+                    const lines = chunk.toString().split('\n').filter(line => line.trim() !== '');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+
+                            if (data === '[DONE]') {
+                                continue;
+                            }
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                const delta = parsed.choices[0]?.delta;
+
+                                if (!delta) continue;
+
+                                // Handle text content
+                                if (delta.content) {
+                                    fullText += delta.content;
+                                    if (onProgress) {
+                                        onProgress(delta.content);
+                                    }
+                                }
+
+                                // Handle tool calls
+                                if (delta.tool_calls) {
+                                    const tc = delta.tool_calls[0];
+                                    if (tc.function?.name) {
+                                        currentToolCall.name = tc.function.name;
+                                    }
+                                    if (tc.function?.arguments) {
+                                        currentToolCall.args += tc.function.arguments;
+                                    }
+                                }
+                            } catch (e) {
+                                // Skip invalid JSON chunks
+                            }
                         }
-                    } else {
-                        reject(new Error(`OpenAI API Error: ${res.statusCode} ${body}`));
                     }
+                });
+
+                res.on('end', () => {
+                    // Parse tool call if present
+                    if (currentToolCall.name) {
+                        try {
+                            toolCall = {
+                                name: currentToolCall.name,
+                                args: JSON.parse(currentToolCall.args)
+                            };
+                        } catch (e) {
+                            console.error('Failed to parse tool call args:', e);
+                        }
+                    }
+
+                    resolve({
+                        text: fullText,
+                        toolCall: toolCall
+                    });
                 });
             });
 

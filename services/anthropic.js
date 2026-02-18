@@ -35,7 +35,7 @@ class AnthropicBrain {
         this.allTools = [...this.baseTools, ...this.customTools];
     }
 
-    async processCommand(userInput) {
+    async processCommand(userInput, onProgress) {
         const memoryEnabled = this.config.get('memoryEnabled') !== false;
         let messages = [];
 
@@ -45,9 +45,9 @@ class AnthropicBrain {
             history.forEach(msg => {
                 const content = msg.parts && msg.parts[0] ? msg.parts[0].text : "";
                 if (content) {
-                    messages.push({ 
-                        role: msg.role === 'model' ? 'assistant' : 'user', 
-                        content: content 
+                    messages.push({
+                        role: msg.role === 'model' ? 'assistant' : 'user',
+                        content: content
                     });
                 }
             });
@@ -68,30 +68,25 @@ class AnthropicBrain {
                 this.memory.saveMessage('user', userInput);
             }
 
-            const response = await this.callAnthropic(messages, systemPrompt, this.allTools);
-            
+            const response = await this.callAnthropicStream(messages, systemPrompt, this.allTools, onProgress);
+
             // Check for tool use
-            if (response.stop_reason === "tool_use") {
-                const toolBlock = response.content.find(block => block.type === "tool_use");
-                
-                if (toolBlock) {
-                    const functionName = toolBlock.name;
-                    const args = toolBlock.input;
-                    const isBaseTool = functionName === "execute_system_command";
-                    
-                    return {
-                        type: isBaseTool ? 'action' : 'plugin_action',
-                        command: isBaseTool ? args.command : functionName,
-                        args: isBaseTool ? (args.args || []) : args,
-                        text: "Processing request, sir."
-                    };
-                }
+            if (response.toolCall) {
+                const functionName = response.toolCall.name;
+                const args = response.toolCall.args;
+                const isBaseTool = functionName === "execute_system_command";
+
+                return {
+                    type: isBaseTool ? 'action' : 'plugin_action',
+                    command: isBaseTool ? args.command : functionName,
+                    args: isBaseTool ? (args.args || []) : args,
+                    text: response.text || "Processing request, sir."
+                };
             }
 
             // Normal Text Response
-            const textBlock = response.content.find(block => block.type === "text");
-            const responseText = textBlock ? textBlock.text : "I didn't get a response.";
-            
+            const responseText = response.text;
+
             if (memoryEnabled) {
                 this.memory.saveMessage('model', responseText);
             }
@@ -108,6 +103,96 @@ class AnthropicBrain {
                 text: "I apologize, sir. Connection to Anthropic services failed."
             };
         }
+    }
+
+    callAnthropicStream(messages, systemPrompt, tools, onProgress) {
+        return new Promise((resolve, reject) => {
+            const data = JSON.stringify({
+                model: this.modelName,
+                max_tokens: 1024,
+                system: systemPrompt,
+                messages: messages,
+                tools: tools,
+                stream: true
+            });
+
+            const options = {
+                hostname: 'api.anthropic.com',
+                path: '/v1/messages',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': this.apiKey,
+                    'anthropic-version': '2023-06-01',
+                    'Content-Length': data.length
+                }
+            };
+
+            let fullText = '';
+            let toolCall = null;
+
+            const req = https.request(options, (res) => {
+                if (res.statusCode < 200 || res.statusCode >= 300) {
+                    let errorBody = '';
+                    res.on('data', chunk => errorBody += chunk);
+                    res.on('end', () => {
+                        reject(new Error(`Anthropic API Error: ${res.statusCode} ${errorBody}`));
+                    });
+                    return;
+                }
+
+                res.on('data', chunk => {
+                    const lines = chunk.toString().split('\n').filter(line => line.trim() !== '');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+
+                            try {
+                                const parsed = JSON.parse(data);
+
+                                // Handle different event types
+                                if (parsed.type === 'content_block_delta') {
+                                    const delta = parsed.delta;
+
+                                    // Text content
+                                    if (delta.type === 'text_delta' && delta.text) {
+                                        fullText += delta.text;
+                                        if (onProgress) {
+                                            onProgress(delta.text);
+                                        }
+                                    }
+                                }
+
+                                // Handle tool use
+                                if (parsed.type === 'content_block_start') {
+                                    const block = parsed.content_block;
+                                    if (block.type === 'tool_use') {
+                                        toolCall = {
+                                            name: block.name,
+                                            args: block.input
+                                        };
+                                    }
+                                }
+                            } catch (e) {
+                                // Skip invalid JSON chunks
+                            }
+                        }
+                    }
+                });
+
+                res.on('end', () => {
+                    resolve({
+                        text: fullText,
+                        toolCall: toolCall
+                    });
+                });
+            });
+
+            req.on('error', (e) => reject(e));
+            req.write(data);
+            req.end();
+        });
     }
 
     callAnthropic(messages, systemPrompt, tools) {

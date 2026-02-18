@@ -1,6 +1,6 @@
 {
   "name": "echo-ai-agent",
-  "version": "1.0.6",
+  "version": "1.0.66",
   "description": "A premium JARVIS-inspired AI assistant for your desktop - voice-controlled, intelligent, and beautiful",
   "main": "main/main.js",
   "bin": {
@@ -13,7 +13,9 @@
     "postinstall": "node scripts/postinstall.js",
     "uninstall": "node scripts/uninstall.js",
     "prepublishOnly": "node scripts/prepublish.js",
-    "test": "echo \"Tests coming soon\" && exit 0"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -26,7 +28,8 @@
     "inquirer": "^13.2.4",
     "node-notifier": "^10.0.1",
     "node-record-lpcm16": "^1.0.1",
-    "ora": "^9.3.0"
+    "ora": "^9.3.0",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "eslint": "^9.0.0",
