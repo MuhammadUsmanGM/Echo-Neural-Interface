@@ -12,10 +12,22 @@ const config = new ConfigManager();
 async function run() {
   printLogo();
   console.log(chalk.gray('  Configure your AI brain and start your journey...\n'));
+  console.log(chalk.yellow('  💡 Navigation: Use ↑↓ arrows to move, Enter to select/edit, Tab to skip\n'));
+
+  // Collect all configuration in one flow
+  const setupConfig = {
+    provider: null,
+    apiKey: null,
+    model: null,
+    userName: null,
+    voiceProvider: null,
+    whisperKey: null,
+    startOnBoot: false,
+    plugins: []
+  };
 
   // ========== STEP 1: AI Provider Selection ==========
-  console.log(chalk.cyan.bold('\n🧠 Step 1: AI Intelligence Provider\n'));
-  console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
+  console.log(chalk.cyan.bold('🧠 AI Intelligence Provider\n'));
   const { provider } = await inquirer.prompt([
     {
       type: 'list',
@@ -47,32 +59,31 @@ async function run() {
       loop: false
     }
   ]);
+  setupConfig.provider = provider;
 
   // ========== STEP 2: API Key ==========
-  console.log(chalk.cyan.bold('\n🔑 Step 2: API Credentials\n'));
+  console.log(chalk.cyan.bold('\n🔑 API Credentials\n'));
   const providerName = AI_MODELS[provider].name;
   const apiKeyInstructions = AI_MODELS[provider].apiKeyUrl || `Get your API key from ${providerName}`;
-  
-  console.log(chalk.yellow(`  ℹ️  ${apiKeyInstructions}`));
-  console.log(chalk.gray('     Use arrow keys to navigate, then Enter to confirm\n'));
-  
+
+  console.log(chalk.yellow(`  ℹ️  ${apiKeyInstructions}\n`));
+
   const { apiKey } = await inquirer.prompt([
     {
-      type: 'input',
+      type: 'password',
       name: 'apiKey',
       message: `Enter your ${providerName} API Key:`,
       validate: (input) => {
         if (!input.trim()) return 'API Key is required.';
         if (input.trim().length < 10) return 'API Key seems too short. Please check.';
         return true;
-      },
-      mask: '*'
+      }
     }
   ]);
+  setupConfig.apiKey = apiKey;
 
   // ========== STEP 3: Model Selection ==========
-  console.log(chalk.cyan.bold('\n🤖 Step 3: AI Model\n'));
-  console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
+  console.log(chalk.cyan.bold('\n🤖 AI Model\n'));
   const models = AI_MODELS[provider].models;
   const { model } = await inquirer.prompt([
     {
@@ -89,9 +100,10 @@ async function run() {
       loop: false
     }
   ]);
+  setupConfig.model = model;
 
   // ========== STEP 4: Personalization ==========
-  console.log(chalk.cyan.bold('\n👤 Step 4: Personalization\n'));
+  console.log(chalk.cyan.bold('\n👤 Personalization\n'));
   const { userName } = await inquirer.prompt([
     {
       type: 'input',
@@ -101,10 +113,10 @@ async function run() {
       validate: (input) => input.trim() ? true : 'Name cannot be empty.'
     }
   ]);
+  setupConfig.userName = userName;
 
   // ========== STEP 5: Voice Engine ==========
-  console.log(chalk.cyan.bold('\n🎙️  Step 5: Voice Recognition\n'));
-  console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
+  console.log(chalk.cyan.bold('\n🎙️  Voice Recognition\n'));
   const { voiceProvider } = await inquirer.prompt([
     {
       type: 'list',
@@ -132,32 +144,31 @@ async function run() {
       loop: false
     }
   ]);
+  setupConfig.voiceProvider = voiceProvider;
 
   // Handle Whisper Cloud API Key if needed
-  let whisperKey = null;
   if (voiceProvider === 'whisper') {
     const existingKeys = config.get('apiKeys') || {};
     if (!existingKeys.openai) {
       console.log(chalk.yellow('\n⚠️  Whisper Cloud requires an OpenAI API key.\n'));
       const { openaiKey } = await inquirer.prompt([
         {
-          type: 'input',
+          type: 'password',
           name: 'openaiKey',
           message: 'Enter your OpenAI API Key:',
           validate: (input) => {
             if (!input.trim()) return 'API Key is required.';
             if (input.trim().length < 10) return 'API Key seems too short.';
             return true;
-          },
-          mask: '*'
+          }
         }
       ]);
-      whisperKey = openaiKey;
+      setupConfig.whisperKey = openaiKey;
     }
   }
 
   // ========== STEP 6: Startup Preference ==========
-  console.log(chalk.cyan.bold('\n🚀 Step 6: Startup Settings\n'));
+  console.log(chalk.cyan.bold('\n🚀 Startup Settings\n'));
   const { startOnBoot } = await inquirer.prompt([
     {
       type: 'confirm',
@@ -166,20 +177,20 @@ async function run() {
       default: false
     }
   ]);
+  setupConfig.startOnBoot = startOnBoot;
 
   // ========== STEP 7: Plugin Selection ==========
-  console.log(chalk.cyan.bold('\n🧩 Step 7: Plugins\n'));
+  console.log(chalk.cyan.bold('\n🧩 Plugins\n'));
   const PluginManager = require('./plugin-manager');
   const pm = new PluginManager();
   const allPlugins = pm.listPlugins();
 
-  let selectedPlugins = [];
   if (allPlugins.length > 0) {
     const { plugins } = await inquirer.prompt([
       {
         type: 'checkbox',
         name: 'plugins',
-        message: 'Enable Plugins (use Space to toggle, Enter to confirm):',
+        message: 'Enable Plugins (Space to toggle, Enter to confirm):',
         choices: allPlugins.map(p => ({
           name: `${p.name} - ${p.description || 'Plugin'}`,
           value: p.name,
@@ -188,31 +199,31 @@ async function run() {
         pageSize: Math.min(allPlugins.length, 8)
       }
     ]);
-    selectedPlugins = plugins;
+    setupConfig.plugins = plugins;
   }
 
   // ========== Save Configuration ==========
   console.log(chalk.cyan.bold('\n💾 Saving Configuration...\n'));
-  
+
   const apiKeys = config.get('apiKeys') || {};
-  apiKeys[provider] = apiKey;
-  if (whisperKey) {
-    apiKeys.openai = whisperKey;
+  apiKeys[setupConfig.provider] = setupConfig.apiKey;
+  if (setupConfig.whisperKey) {
+    apiKeys.openai = setupConfig.whisperKey;
   }
 
   config.set('apiKeys', apiKeys);
-  config.set('aiProvider', provider);
-  config.set('model', model);
-  config.set('userName', userName);
-  config.set('voiceProvider', voiceProvider);
-  config.set('startOnBoot', startOnBoot);
-  config.set('plugins', selectedPlugins);
+  config.set('aiProvider', setupConfig.provider);
+  config.set('model', setupConfig.model);
+  config.set('userName', setupConfig.userName);
+  config.set('voiceProvider', setupConfig.voiceProvider);
+  config.set('startOnBoot', setupConfig.startOnBoot);
+  config.set('plugins', setupConfig.plugins);
   config.set('configured', true);
 
   // Create/update .env for backward compatibility
-  if (provider === 'google') {
+  if (setupConfig.provider === 'google') {
     const envPath = path.join(__dirname, '..', '.env');
-    fs.writeFileSync(envPath, `GOOGLE_AI_API_KEY=${apiKey}\n`);
+    fs.writeFileSync(envPath, `GOOGLE_AI_API_KEY=${setupConfig.apiKey}\n`);
   }
 
   // ========== Summary ==========
@@ -221,11 +232,11 @@ async function run() {
   console.log(chalk.white('  │  📊 Configuration Summary              │'));
   console.log(chalk.white('  ├─────────────────────────────────────────┤'));
   console.log(chalk.white(`  │  🧠 AI Provider:    ${chalk.cyan(providerName.padEnd(22))}│`));
-  console.log(chalk.white(`  │  🤖 Model:          ${chalk.cyan(model.padEnd(22))}│`));
-  console.log(chalk.white(`  │  👤 Your Name:      ${chalk.cyan(userName.padEnd(22))}│`));
-  console.log(chalk.white(`  │  🎙️  Voice Engine:   ${chalk.cyan(voiceProvider.padEnd(22))}│`));
-  console.log(chalk.white(`  │  🚀 Startup:        ${chalk.cyan((startOnBoot ? 'Auto-start' : 'Manual').padEnd(22))}│`));
-  console.log(chalk.white(`  │  🧩 Plugins:        ${chalk.cyan(selectedPlugins.length.toString().padEnd(22))}│`));
+  console.log(chalk.white(`  │  🤖 Model:          ${chalk.cyan(setupConfig.model.padEnd(22))}│`));
+  console.log(chalk.white(`  │  👤 Your Name:      ${chalk.cyan(setupConfig.userName.padEnd(22))}│`));
+  console.log(chalk.white(`  │  🎙️  Voice Engine:   ${chalk.cyan(setupConfig.voiceProvider.padEnd(22))}│`));
+  console.log(chalk.white(`  │  🚀 Startup:        ${chalk.cyan((setupConfig.startOnBoot ? 'Auto-start' : 'Manual').padEnd(22))}│`));
+  console.log(chalk.white(`  │  🧩 Plugins:        ${chalk.cyan(setupConfig.plugins.length.toString().padEnd(22))}│`));
   console.log(chalk.white('  └─────────────────────────────────────────┘'));
 
   console.log(chalk.gray('\n✨ Echo is ready to serve you!\n'));
@@ -238,7 +249,7 @@ async function run() {
   const { spawn } = require('child_process');
 
   // Setup Local Whisper if selected
-  if (voiceProvider === 'whisper-local') {
+  if (setupConfig.voiceProvider === 'whisper-local') {
     try {
       const { setup: setupWhisper } = require('./whisper-setup');
       console.log(chalk.yellow('🏠 Initializing Local Whisper environment...'));
