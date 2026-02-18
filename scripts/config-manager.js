@@ -1,4 +1,4 @@
-const Conf = require('conf');
+const Conf = require('conf').default;
 const path = require('path');
 
 class ConfigManager {

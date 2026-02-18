@@ -1,4 +1,4 @@
-const inquirer = require('inquirer');
+const { default: inquirer } = require('inquirer');
 const chalk = require('chalk');
 const Scheduler = require('./scheduler');
 

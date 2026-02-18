@@ -18,7 +18,7 @@ const config = new ConfigManager();
 const banner = getLogo();
 
 program
-  .name('echo')
+  .name('echo-ai')
   .description('A premium JARVIS-inspired AI assistant for your desktop')
   .version(packageJson.version);
 
@@ -123,8 +123,8 @@ program
       console.log(chalk.yellow('⚠️  Echo will no longer start on boot.'));
     } else {
       // Interactive Mode
-      const inquirer = require('inquirer');
-      
+      const { default: inquirer } = require('inquirer');
+
       const mainMenu = async () => {
         const { action } = await inquirer.prompt([
           {
@@ -334,7 +334,7 @@ program
             const providerData = AI_MODELS[currentProvider];
             
             if (!providerData) {
-                console.log(chalk.red('⚠️ Invalid provider configured. Please run "echo setup".'));
+                console.log(chalk.red('⚠️ Invalid provider configured. Please run "echo-ai setup".'));
                 break;
             }
 
@@ -434,8 +434,8 @@ program
       const theme = themes[name];
       console.log(`  ${chalk.hex(theme.color)('●')} ${chalk.bold(name)} - ${chalk.gray(theme.description)}`);
     });
-    
-    console.log(chalk.gray('\nUse: echo config --set theme <name>'));
+
+    console.log(chalk.gray('\nUse: echo-ai config --set theme <name>'));
   });
 
 program
@@ -576,7 +576,7 @@ program
         const latest = execSync(`npm view ${packageJson.name} version`, { encoding: 'utf8' }).trim();
         if (latest && latest !== packageJson.version) {
             console.log(chalk.yellow(`\n⚠️  Update available: ${latest} (Current: ${packageJson.version})`));
-            console.log(chalk.white(`   Run `) + chalk.cyan(`echo update`) + chalk.white(` to update.`));
+            console.log(chalk.white(`   Run `) + chalk.cyan(`echo-ai update`) + chalk.white(` to update.`));
         } else {
             console.log(chalk.green('\n✓ You are using the latest version.'));
         }
@@ -604,12 +604,12 @@ program
       }
 
       spinner.stop();
-      
+
       if (updateInfo.updateAvailable) {
         console.log(chalk.cyan('\n🔔 Update Available!\n'));
         console.log(`  ${chalk.bold('Current Version:')} ${chalk.yellow(updateInfo.currentVersion)}`);
         console.log(`  ${chalk.bold('Latest Version:')}  ${chalk.green(updateInfo.latestVersion)}`);
-        console.log(chalk.gray('\nRun ') + chalk.cyan('echo update') + chalk.gray(' to install.\n'));
+        console.log(chalk.gray('\nRun ') + chalk.cyan('echo-ai update') + chalk.gray(' to install.\n'));
       } else {
         console.log(chalk.green(`\n✓ You're already on the latest version (${updateInfo.currentVersion})\n`));
       }
@@ -723,8 +723,8 @@ program
 // Default action (no command)
 program.action(() => {
   console.log(banner);
-  console.log(chalk.gray('Run ') + chalk.cyan('echo start') + chalk.gray(' to launch Echo'));
-  console.log(chalk.gray('Run ') + chalk.cyan('echo --help') + chalk.gray(' for more commands\n'));
+  console.log(chalk.gray('Run ') + chalk.cyan('echo-ai start') + chalk.gray(' to launch Echo'));
+  console.log(chalk.gray('Run ') + chalk.cyan('echo-ai --help') + chalk.gray(' for more commands\n'));
 });
 
 program.parse(process.argv);
@@ -732,8 +732,8 @@ program.parse(process.argv);
 // If no arguments provided, show banner and help
 if (!process.argv.slice(2).length) {
   console.log(banner);
-  console.log(chalk.gray('Run ') + chalk.cyan('echo start') + chalk.gray(' to launch Echo'));
-  console.log(chalk.gray('Run ') + chalk.cyan('echo --help') + chalk.gray(' for more commands\n'));
+  console.log(chalk.gray('Run ') + chalk.cyan('echo-ai start') + chalk.gray(' to launch Echo'));
+  console.log(chalk.gray('Run ') + chalk.cyan('echo-ai --help') + chalk.gray(' for more commands\n'));
 }
 
 function launchEcho(debug = false) {

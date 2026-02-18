@@ -172,7 +172,7 @@ class UpdateManager {
      * Auto-update with user confirmation
      */
     async autoUpdate() {
-        const inquirer = require('inquirer');
+        const { default: inquirer } = require('inquirer');
         const updateInfo = await this.silentUpdateCheck();
 
         if (!updateInfo.available) {
