@@ -720,7 +720,7 @@ program
     }
   });
 
-// Default action (no command)
+// Default action (no command) - show banner and quick help
 program.action(() => {
   console.log(banner);
   console.log(chalk.gray('Run ') + chalk.cyan('echo-ai start') + chalk.gray(' to launch Echo'));
@@ -728,13 +728,6 @@ program.action(() => {
 });
 
 program.parse(process.argv);
-
-// If no arguments provided, show banner and help
-if (!process.argv.slice(2).length) {
-  console.log(banner);
-  console.log(chalk.gray('Run ') + chalk.cyan('echo-ai start') + chalk.gray(' to launch Echo'));
-  console.log(chalk.gray('Run ') + chalk.cyan('echo-ai --help') + chalk.gray(' for more commands\n'));
-}
 
 function launchEcho(debug = false) {
   console.log(chalk.cyan('🚀 Launching Echo...\n'));

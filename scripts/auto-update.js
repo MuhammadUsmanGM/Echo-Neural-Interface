@@ -1,5 +1,5 @@
-const UpdateManager = require('./scripts/update-manager');
-const ConfigManager = require('./scripts/config-manager');
+const UpdateManager = require('./update-manager');
+const ConfigManager = require('./config-manager');
 const chalk = require('chalk');
 
 /**

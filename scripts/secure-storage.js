@@ -1,5 +1,5 @@
 const { safeStorage } = require('electron');
-const Conf = require('conf');
+const Conf = require('conf').default;
 
 /**
  * SecureStorage - Encrypts sensitive data using Electron's safeStorage API
