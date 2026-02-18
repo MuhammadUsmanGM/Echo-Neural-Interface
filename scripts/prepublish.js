@@ -57,7 +57,8 @@ try {
 
     // 4. Verify CLI entry point
     console.log(chalk.yellow('\nVerifying CLI bin...'));
-    const binPath = packageJson.bin.echo;
+    const binKey = Object.keys(packageJson.bin)[0]; // Get first bin entry (echo-ai)
+    const binPath = packageJson.bin[binKey];
     if (!fs.existsSync(path.join(__dirname, '..', binPath))) {
         console.error(chalk.red(`❌ Error: CLI file ${binPath} not found!`));
         process.exit(1);
