@@ -1,6 +1,6 @@
 {
   "name": "echo-ai-agent",
-  "version": "1.0.71",
+  "version": "1.0.72",
   "description": "A premium JARVIS-inspired AI assistant for your desktop - voice-controlled, intelligent, and beautiful",
   "main": "main/main.js",
   "bin": {
@@ -32,7 +32,7 @@
     "winston": "^3.19.0"
   },
   "devDependencies": {
-    "eslint": "^4.1.1",
+    "eslint": "^10.0.0",
     "jest": "^29.7.0",
     "prettier": "^3.2.5"
   },
