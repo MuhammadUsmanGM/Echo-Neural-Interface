@@ -27,8 +27,6 @@ program
   .description('Launch Echo AI Agent')
   .option('-d, --debug', 'Run in debug mode')
   .action((options) => {
-    console.log(banner);
-    
     // Check if configured
     if (!config.get('configured')) {
       console.log(chalk.yellow('⚠️  Echo is not configured yet. Running setup wizard...\n'));
@@ -36,6 +34,7 @@ program
         launchEcho(options.debug);
       });
     } else {
+      console.log(banner);
       launchEcho(options.debug);
     }
   });
@@ -44,7 +43,7 @@ program
   .command('setup')
   .description('Run the interactive setup wizard')
   .action(async () => {
-    console.log(banner);
+    // Logo is printed by setupWizard.run() - no need to print here
     await setupWizard.run();
   });
 
