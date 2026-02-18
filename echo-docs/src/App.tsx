@@ -234,7 +234,12 @@ function App() {
             <div className="feature-card">
               <div className="card-num">02</div>
               <h3>Low Latency</h3>
-              <p className="text-content">Powered by Flash-optimized neural models, Echo responds to commands in sub-500ms intervals.</p>
+              <p className="text-content">Powered by Flash-optimized neural models with real-time streaming, Echo responds to commands in sub-500ms intervals.</p>
+            </div>
+            <div className="feature-card">
+              <div className="card-num">03</div>
+              <h3>Production Stable</h3>
+              <p className="text-content">Built with comprehensive error handling, structured logging, input validation, and 36+ passing tests for reliability.</p>
             </div>
           </div>
 
@@ -257,15 +262,15 @@ function App() {
         <DocSection id="setup" label="Guide_02" onVisible={setActiveSection}>
           <h2 className="section-title">Zero-Friction Setup</h2>
           <p className="text-content">Unlike legacy assistants, Echo respects your time. The initial setup is a two-step process that takes less than 20 seconds.</p>
-          
+
           <div className="step-item">
             <div className="step-num"><Shield size={18} /></div>
             <div className="step-content">
-              <h4>Global Authentication</h4>
-              <p className="text-content">Connect your API key from Google, OpenAI, Anthropic, or DeepSeek. Echo automatically configures the best model for your machine.</p>
+              <h4>Secure Authentication</h4>
+              <p className="text-content">Connect your API key from Google, OpenAI, Anthropic, or DeepSeek. Echo automatically encrypts keys using OS-level security (Windows DPAPI, macOS Keychain, Linux Secret Service) and configures the best model for your machine.</p>
             </div>
           </div>
-          
+
           <div className="step-item">
             <div className="step-num"><Fingerprint size={18} /></div>
             <div className="step-content">
@@ -274,30 +279,34 @@ function App() {
             </div>
           </div>
 
-          <Terminal command="echo setup" output="✓ Provider set to Gemini 2.0 Flash Lite. Welcome back, Usman." />
+          <Terminal command="echo setup" output="✓ Provider set to Gemini 2.0 Flash Lite. API key encrypted. Welcome back, Usman." />
         </DocSection>
 
         <DocSection id="intelligence" label="Logic_03" onVisible={setActiveSection}>
           <h2 className="section-title">Multi-Model Intelligence</h2>
-          <p className="text-content">Switch between the world's most capable AI "Brains" instantly. No complex reconfiguration required.</p>
-          
+          <p className="text-content">Switch between the world's most capable AI "Brains" instantly. No complex reconfiguration required. All providers now support real-time streaming for instant feedback.</p>
+
           <div className="point-row">
             <div className="point-key">Adaptive Brains</div>
-            <div className="point-val">Choose Gemini for speed, GPT-4o for precision, or Claude for complex coding tasks.</div>
+            <div className="point-val">Choose Gemini for speed, GPT-4o for precision, Claude for complex coding, or DeepSeek for reasoning tasks.</div>
           </div>
           <div className="point-row">
             <div className="point-key">Model Selection</div>
             <div className="point-val">Access the "Intelligence" hub in <code>echo config</code> to toggle between specific model versions.</div>
           </div>
+          <div className="point-row">
+            <div className="point-key">Streaming Responses</div>
+            <div className="point-val">All AI providers now support real-time streaming for improved perceived performance and instant feedback.</div>
+          </div>
 
           <div className="feature-grid">
             <div className="feature-card" style={{ borderColor: 'var(--accent-primary)' }}>
               <h3>Flash Models</h3>
-              <p className="text-content">Perfect for system control, app launches, and quick facts. Minimal token usage and maximum speed.</p>
+              <p className="text-content">Perfect for system control, app launches, and quick facts. Minimal token usage and maximum speed with real-time streaming.</p>
             </div>
             <div className="feature-card">
               <h3>Reasoning Models</h3>
-              <p className="text-content">Ideal for long-form content generation, data analysis, and architecting complex code solutions.</p>
+              <p className="text-content">Ideal for long-form content generation, data analysis, and architecting complex code solutions with streaming output.</p>
             </div>
           </div>
         </DocSection>
@@ -305,17 +314,19 @@ function App() {
         <DocSection id="memory" label="Privacy_04" onVisible={setActiveSection}>
           <h2 className="section-title">Encrypted Local Memory</h2>
           <p className="text-content">Your data belongs to you. Period. Echo uses hardware-bound encryption to secure your preferences and history.</p>
-          
+
           <div className="code-container" style={{ borderColor: 'var(--accent-primary)', background: 'rgba(16, 185, 129, 0.05)' }}>
             <pre>
               <span className="syntax-comment">// Security Protocol: Hardware-Locked</span><br/>
               <span className="syntax-keyword">Encryption:</span> AES-256-CBC with unique machine salt<br/>
+              <span className="syntax-keyword">API Keys:</span> OS-level encryption (DPAPI/Keychain/Secret Service)<br/>
               <span className="syntax-keyword">Persistence:</span> Encrypted persistence in ~/.echo-memory/<br/>
+              <span className="syntax-keyword">Memory Limits:</span> Max 1,000 messages (auto-pruning enabled)<br/>
               <span className="syntax-keyword">Privacy:</span> 0% data shared for training
             </pre>
           </div>
           <p className="text-content">
-            Manage your digital footprint using the <code>echo memory</code> suite to enable, disable, or purge history.
+            Manage your digital footprint using the <code>echo memory</code> suite to enable, disable, or purge history. Echo automatically manages memory with intelligent pruning to prevent unbounded growth.
           </p>
         </DocSection>
 
@@ -369,7 +380,7 @@ function App() {
         <DocSection id="config-guide" label="Control_07" onVisible={setActiveSection}>
           <h2 className="section-title">Mastering Settings</h2>
           <p className="text-content">Accessible via <code>echo config</code>, this is the central nervous system of your Echo experience. Here is a breakdown of every module:</p>
-          
+
           <div className="feature-grid">
             <div className="feature-card">
               <h3>🎨 Appearance</h3>
@@ -377,7 +388,7 @@ function App() {
             </div>
             <div className="feature-card">
               <h3>🤖 AI Intelligence</h3>
-              <p className="text-content">Connect providers. Mix-and-match: Use Gemini for quick tasks and GPT-4o for complex reasoning.</p>
+              <p className="text-content">Connect providers with encrypted API keys. Mix-and-match: Use Gemini for quick tasks and GPT-4o for complex reasoning.</p>
             </div>
             <div className="feature-card">
               <h3>🧪 Plugin Manager</h3>
@@ -385,7 +396,7 @@ function App() {
             </div>
             <div className="feature-card">
               <h3>🧠 Memory Lab</h3>
-              <p className="text-content">Toggle conversational history. Here you can also "Purify" Echo's memory, deleting all local learning.</p>
+              <p className="text-content">Toggle conversational history with automatic pruning (max 1,000 messages). "Purify" Echo's memory to delete all local learning.</p>
             </div>
           </div>
         </DocSection>
@@ -445,6 +456,10 @@ function App() {
             <div className="point-row">
               <div className="point-key"><code>echo config</code></div>
               <div className="point-val">Interactive settings hub. Changes take effect instantly.</div>
+            </div>
+            <div className="point-row">
+              <div className="point-key"><code>echo test</code></div>
+              <div className="point-val">Run the comprehensive test suite (36+ tests) to verify system stability.</div>
             </div>
             <div className="point-row">
               <div className="point-key"><code>echo startup [--enable|--disable]</code></div>
