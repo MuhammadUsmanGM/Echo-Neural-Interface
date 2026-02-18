@@ -126,14 +126,13 @@ program
 
       const mainMenu = async () => {
         console.log(chalk.cyan.bold('\n⚙️  Echo Configuration Management\n'));
-        console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
-        
+
         const { action } = await inquirer.prompt([
           {
             type: 'list',
             name: 'action',
             message: 'Select an option:',
-            pageSize: 12,
+            pageSize: 15,
             choices: [
               { name: '📋 View Current Configuration', value: 'list', short: 'View Config' },
               { name: '🎨 Appearance Settings', value: 'appearance', short: 'Appearance' },
@@ -209,6 +208,7 @@ program
 
           case 'personalization':
             console.log(chalk.cyan.bold('\n👤 Personalization\n'));
+            console.log(chalk.gray('  Type your name and press Enter\n'));
             const { newName } = await inquirer.prompt([
               {
                 type: 'input',
@@ -245,11 +245,10 @@ program
               console.log(chalk.yellow('\n⚠️  Whisper Cloud requires an OpenAI API key.\n'));
               const { openAIKey } = await inquirer.prompt([
                 {
-                  type: 'input',
+                  type: 'password',
                   name: 'openAIKey',
                   message: 'Enter your OpenAI API Key:',
-                  validate: (i) => i.trim() ? true : 'Key is required for Whisper.',
-                  mask: '*'
+                  validate: (i) => i.trim() ? true : 'Key is required for Whisper.'
                 }
               ]);
               const keys = config.get('apiKeys') || {};
@@ -308,30 +307,14 @@ program
 
           case 'plugins':
             console.log(chalk.cyan.bold('\n🧩 Plugin Management\n'));
-            console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
+            console.log(chalk.gray('  Use ↑↓ arrows to navigate, Space to toggle, Enter to confirm\n'));
             const PluginManager = require('./scripts/plugin-manager');
-            const generator = require('./scripts/plugin-generator');
             const pm = new PluginManager();
             const allPlugins = pm.listPlugins();
 
-            const { pluginAction } = await inquirer.prompt([
-                {
-                    type: 'list',
-                    name: 'pluginAction',
-                    message: 'Select Action:',
-                    choices: [
-                        { name: '✅ Toggle Plugins', value: 'toggle', short: 'Toggle' },
-                        { name: '🛠️  Create New Plugin', value: 'create', short: 'Create' },
-                        { name: '⬅️  Back', value: 'back', short: 'Back' }
-                    ],
-                    pageSize: 3,
-                    loop: false
-                }
-            ]);
-
-            if (pluginAction === 'back') break;
-            if (pluginAction === 'create') {
-                await generator.run();
+            if (allPlugins.length === 0) {
+                console.log(chalk.yellow('⚠️  No plugins found.'));
+                console.log(chalk.gray('Drop .js files into the "plugins" folder to extend Echo.\n'));
                 break;
             }
 
@@ -339,7 +322,7 @@ program
                 {
                   type: 'checkbox',
                   name: 'enabledPlugins',
-                  message: 'Toggle Plugins (Space to select, Enter to confirm):',
+                  message: 'Select plugins to enable:',
                   choices: allPlugins.map(p => ({
                     name: `${p.name} - ${p.description || 'Plugin'}`,
                     value: p.name,
@@ -355,12 +338,13 @@ program
           case 'startup':
             const currentStartup = config.get('startOnBoot') === true;
             console.log(chalk.cyan.bold('\n🚀 Startup Settings\n'));
+            console.log(chalk.gray('  Use ← → arrow keys or Y/N, then press Enter\n'));
             const startupConfirm = await inquirer.prompt([
                 {
                     type: 'confirm',
                     name: 'enable',
-                    message: currentStartup 
-                        ? 'Echo is set to start on boot. Would you like to disable this?' 
+                    message: currentStartup
+                        ? 'Echo is set to start on boot. Would you like to disable this?'
                         : 'Would you like Echo to start automatically when you log in?',
                     default: !currentStartup
                 }
@@ -420,6 +404,7 @@ program
           case 'autoupdate':
             const currentAutoUpdate = config.get('autoUpdateCheck') !== false;
             console.log(chalk.cyan.bold('\n🔄 Auto-Update Settings\n'));
+            console.log(chalk.gray('  Use ← → arrow keys or Y/N, then press Enter\n'));
             const autoUpdateConfirm = await inquirer.prompt([
                 {
                     type: 'confirm',
@@ -437,6 +422,7 @@ program
           case 'notify':
             const currentNotify = config.get('startupNotification') !== false;
             console.log(chalk.cyan.bold('\n🔔 Notification Settings\n'));
+            console.log(chalk.gray('  Use ← → arrow keys or Y/N, then press Enter\n'));
             const notifyConfirm = await inquirer.prompt([
                 {
                     type: 'confirm',
