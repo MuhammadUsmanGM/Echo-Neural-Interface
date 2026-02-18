@@ -125,30 +125,34 @@ program
       const { default: inquirer } = require('inquirer');
 
       const mainMenu = async () => {
+        console.log(chalk.cyan.bold('\n⚙️  Echo Configuration Management\n'));
+        console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
+        
         const { action } = await inquirer.prompt([
           {
             type: 'list',
             name: 'action',
-            message: chalk.cyan.bold('Echo Configuration Management:'),
+            message: 'Select an option:',
             pageSize: 12,
             choices: [
-              { name: '📋 View Current Configuration', value: 'list' },
-              { name: '🎨 Appearance Settings', value: 'appearance' },
-              { name: '👤 Personalization', value: 'personalization' },
-              { name: '🤖 AI Intelligence', value: 'ai' },
-              { name: '🎙️  Voice Settings', value: 'voice' },
-              { name: '🧠 Memory Management', value: 'memory' },
-              { name: '🧩 Plugin Management', value: 'plugins' },
-              { name: '⌨️  Workflow Macros', value: 'workflows' },
-              { name: '🚀 Startup Settings', value: 'startup' },
-              { name: '🔄 Auto-Update Settings', value: 'autoupdate' },
-              { name: '🔔 Notification Settings', value: 'notify' },
+              { name: '📋 View Current Configuration', value: 'list', short: 'View Config' },
+              { name: '🎨 Appearance Settings', value: 'appearance', short: 'Appearance' },
+              { name: '👤 Personalization', value: 'personalization', short: 'Personalization' },
+              { name: '🤖 AI Intelligence', value: 'ai', short: 'AI Settings' },
+              { name: '🎙️  Voice Settings', value: 'voice', short: 'Voice' },
+              { name: '🧠 Memory Management', value: 'memory', short: 'Memory' },
+              { name: '🧩 Plugin Management', value: 'plugins', short: 'Plugins' },
+              { name: '⌨️  Workflow Macros', value: 'workflows', short: 'Workflows' },
+              { name: '🚀 Startup Settings', value: 'startup', short: 'Startup' },
+              { name: '🔄 Auto-Update Settings', value: 'autoupdate', short: 'Auto-Update' },
+              { name: '🔔 Notification Settings', value: 'notify', short: 'Notifications' },
               new inquirer.Separator('───'),
-              { name: '📚 Documentation Hub', value: 'docs' },
-              { name: '⚠️  Reset All Settings', value: 'reset' },
+              { name: '📚 Documentation Hub', value: 'docs', short: 'Docs' },
+              { name: '⚠️  Reset All Settings', value: 'reset', short: 'Reset' },
               new inquirer.Separator(),
               { name: '❌ Exit', value: 'exit', short: 'Exit' }
-            ]
+            ],
+            loop: false
           }
         ]);
 
@@ -166,6 +170,7 @@ program
 
           case 'appearance':
             console.log(chalk.cyan.bold('\n🎨 Appearance Settings\n'));
+            console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
             const appAnswers = await inquirer.prompt([
               {
                 type: 'list',
@@ -180,7 +185,8 @@ program
                   { name: '🔷 Blue  (Ocean)', value: 'blue', short: 'Blue' }
                 ],
                 default: ['cyan', 'purple', 'green', 'gold', 'red', 'blue'].indexOf(config.get('theme')) || 0,
-                pageSize: 6
+                pageSize: 6,
+                loop: false
               },
               {
                 type: 'list',
@@ -192,7 +198,8 @@ program
                   { name: '🖥️  Large  (Full View)', value: 'large', short: 'Large' }
                 ],
                 default: ['small', 'medium', 'large'].indexOf(config.get('size')) || 1,
-                pageSize: 3
+                pageSize: 3,
+                loop: false
               }
             ]);
             config.set('theme', appAnswers.theme);
@@ -217,6 +224,7 @@ program
 
           case 'voice':
             console.log(chalk.cyan.bold('\n🎙️  Voice Recognition Settings\n'));
+            console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
             const { voiceProvider } = await inquirer.prompt([
               {
                 type: 'list',
@@ -228,7 +236,8 @@ program
                   { name: '🏠 Whisper Local  (Privacy, Offline)', value: 'whisper-local', short: 'Whisper Local' }
                 ],
                 default: ['browser', 'whisper', 'whisper-local'].indexOf(config.get('voiceProvider')) || 0,
-                pageSize: 3
+                pageSize: 3,
+                loop: false
               }
             ]);
 
@@ -259,6 +268,7 @@ program
 
           case 'memory':
             console.log(chalk.cyan.bold('\n🧠 Memory Management\n'));
+            console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
             const memEnabled = config.get('memoryEnabled') !== false;
             const memAction = await inquirer.prompt([
               {
@@ -270,7 +280,8 @@ program
                   { name: '🗑️  Clear All Memory', value: 'clear', short: 'Clear Memory' },
                   { name: '⬅️  Back', value: 'back', short: 'Back' }
                 ],
-                pageSize: 3
+                pageSize: 3,
+                loop: false
               }
             ]);
 
@@ -297,6 +308,7 @@ program
 
           case 'plugins':
             console.log(chalk.cyan.bold('\n🧩 Plugin Management\n'));
+            console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
             const PluginManager = require('./scripts/plugin-manager');
             const generator = require('./scripts/plugin-generator');
             const pm = new PluginManager();
@@ -312,7 +324,8 @@ program
                         { name: '🛠️  Create New Plugin', value: 'create', short: 'Create' },
                         { name: '⬅️  Back', value: 'back', short: 'Back' }
                     ],
-                    pageSize: 3
+                    pageSize: 3,
+                    loop: false
                 }
             ]);
 
@@ -367,6 +380,7 @@ program
             }
 
             console.log(chalk.cyan.bold(`\n🤖 AI Model Selection - ${providerData.name}\n`));
+            console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
             const { selectedModel } = await inquirer.prompt([
               {
                 type: 'list',
@@ -378,7 +392,8 @@ program
                     short: m.name
                 })),
                 default: providerData.models.findIndex(m => m.id === config.get('model')) || 0,
-                pageSize: providerData.models.length
+                pageSize: Math.min(providerData.models.length, 8),
+                loop: false
               }
             ]);
 

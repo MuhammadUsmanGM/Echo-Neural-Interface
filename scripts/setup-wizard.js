@@ -15,34 +15,36 @@ async function run() {
 
   // ========== STEP 1: AI Provider Selection ==========
   console.log(chalk.cyan.bold('\n🧠 Step 1: AI Intelligence Provider\n'));
+  console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
   const { provider } = await inquirer.prompt([
     {
       type: 'list',
       name: 'provider',
       message: 'Select your AI Provider:',
       choices: [
-        { 
-          name: '🟢 Google Gemini  (Free tier, Fast, Multimodal)', 
+        {
+          name: '🟢 Google Gemini  (Free tier, Fast, Multimodal)',
           value: 'google',
           short: 'Google Gemini'
         },
-        { 
-          name: '🔵 OpenAI  (GPT-4o, Most Popular)', 
+        {
+          name: '🔵 OpenAI  (GPT-4o, Most Popular)',
           value: 'openai',
           short: 'OpenAI'
         },
-        { 
-          name: '🟣 Anthropic  (Claude, Best for Reasoning)', 
+        {
+          name: '🟣 Anthropic  (Claude, Best for Reasoning)',
           value: 'anthropic',
           short: 'Anthropic'
         },
-        { 
-          name: '🔷 DeepSeek  (Affordable & Powerful)', 
+        {
+          name: '🔷 DeepSeek  (Affordable & Powerful)',
           value: 'deepseek',
           short: 'DeepSeek'
         }
       ],
-      pageSize: 4
+      pageSize: 4,
+      loop: false
     }
   ]);
 
@@ -70,6 +72,7 @@ async function run() {
 
   // ========== STEP 3: Model Selection ==========
   console.log(chalk.cyan.bold('\n🤖 Step 3: AI Model\n'));
+  console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
   const models = AI_MODELS[provider].models;
   const { model } = await inquirer.prompt([
     {
@@ -82,7 +85,8 @@ async function run() {
         short: m.name
       })),
       default: models.findIndex(m => m.id === AI_MODELS[provider].defaultModel) || 0,
-      pageSize: models.length
+      pageSize: Math.min(models.length, 8),
+      loop: false
     }
   ]);
 
@@ -100,30 +104,32 @@ async function run() {
 
   // ========== STEP 5: Voice Engine ==========
   console.log(chalk.cyan.bold('\n🎙️  Step 5: Voice Recognition\n'));
+  console.log(chalk.gray('  Use ↑↓ arrow keys to navigate, Enter to select\n'));
   const { voiceProvider } = await inquirer.prompt([
     {
       type: 'list',
       name: 'voiceProvider',
       message: 'Select Voice Recognition Engine:',
       choices: [
-        { 
-          name: '🌐 Browser API  (Native, Fast, Free - Recommended)', 
+        {
+          name: '🌐 Browser API  (Native, Fast, Free - Recommended)',
           value: 'browser',
           short: 'Browser API'
         },
-        { 
-          name: '☁️  Whisper Cloud  (Best Accuracy, Needs OpenAI Key)', 
+        {
+          name: '☁️  Whisper Cloud  (Best Accuracy, Needs OpenAI Key)',
           value: 'whisper',
           short: 'Whisper Cloud'
         },
-        { 
-          name: '🏠 Whisper Local  (Privacy-Focused, Offline)', 
+        {
+          name: '🏠 Whisper Local  (Privacy-Focused, Offline)',
           value: 'whisper-local',
           short: 'Whisper Local'
         }
       ],
       default: config.get('voiceProvider') || 'browser',
-      pageSize: 3
+      pageSize: 3,
+      loop: false
     }
   ]);
 
