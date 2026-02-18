@@ -130,24 +130,25 @@ program
           {
             type: 'list',
             name: 'action',
-            message: 'Echo Configuration Management:',
-            pageSize: 10,
+            message: chalk.cyan.bold('Echo Configuration Management:'),
+            pageSize: 12,
             choices: [
-              { name: '📋 View Status', value: 'list' },
+              { name: '📋 View Current Configuration', value: 'list' },
               { name: '🎨 Appearance Settings', value: 'appearance' },
               { name: '👤 Personalization', value: 'personalization' },
               { name: '🤖 AI Intelligence', value: 'ai' },
               { name: '🎙️  Voice Settings', value: 'voice' },
-              { name: '📚 Documentation Hub', value: 'docs' },
               { name: '🧠 Memory Management', value: 'memory' },
               { name: '🧩 Plugin Management', value: 'plugins' },
               { name: '⌨️  Workflow Macros', value: 'workflows' },
               { name: '🚀 Startup Settings', value: 'startup' },
               { name: '🔄 Auto-Update Settings', value: 'autoupdate' },
               { name: '🔔 Notification Settings', value: 'notify' },
+              new inquirer.Separator('───'),
+              { name: '📚 Documentation Hub', value: 'docs' },
               { name: '⚠️  Reset All Settings', value: 'reset' },
               new inquirer.Separator(),
-              { name: '❌ Exit', value: 'exit' }
+              { name: '❌ Exit', value: 'exit', short: 'Exit' }
             ]
           }
         ]);
@@ -158,70 +159,89 @@ program
           case 'list':
             listConfig();
             break;
-            
+
           case 'docs':
             const { startServer } = require('./scripts/docs-server');
             startServer();
-            return; // Exit config after starting docs as it's a separate process usually
-            
+            return;
+
           case 'appearance':
+            console.log(chalk.cyan.bold('\n🎨 Appearance Settings\n'));
             const appAnswers = await inquirer.prompt([
               {
                 type: 'list',
                 name: 'theme',
                 message: 'Select Theme:',
-                choices: ['cyan', 'purple', 'green', 'gold', 'red', 'blue'],
-                default: config.get('theme')
+                choices: [
+                  { name: '🔵 Cyan  (Classic JARVIS)', value: 'cyan', short: 'Cyan' },
+                  { name: '🟣 Purple  (Royal)', value: 'purple', short: 'Purple' },
+                  { name: '🟢 Green  (Matrix)', value: 'green', short: 'Green' },
+                  { name: '🟡 Gold  (Iron Man)', value: 'gold', short: 'Gold' },
+                  { name: '🔴 Red  (Cyberpunk)', value: 'red', short: 'Red' },
+                  { name: '🔷 Blue  (Ocean)', value: 'blue', short: 'Blue' }
+                ],
+                default: ['cyan', 'purple', 'green', 'gold', 'red', 'blue'].indexOf(config.get('theme')) || 0,
+                pageSize: 6
               },
               {
                 type: 'list',
                 name: 'size',
                 message: 'Window Size:',
-                choices: ['small', 'medium', 'large'],
-                default: config.get('size')
+                choices: [
+                  { name: '📱 Small  (Compact)', value: 'small', short: 'Small' },
+                  { name: '💻 Medium  (Balanced)', value: 'medium', short: 'Medium' },
+                  { name: '🖥️  Large  (Full View)', value: 'large', short: 'Large' }
+                ],
+                default: ['small', 'medium', 'large'].indexOf(config.get('size')) || 1,
+                pageSize: 3
               }
             ]);
             config.set('theme', appAnswers.theme);
             config.set('size', appAnswers.size);
-            console.log(chalk.green('✓ Appearance updated.'));
+            console.log(chalk.green('\n✓ Appearance updated successfully.'));
             break;
 
           case 'personalization':
+            console.log(chalk.cyan.bold('\n👤 Personalization\n'));
             const { newName } = await inquirer.prompt([
               {
                 type: 'input',
                 name: 'newName',
                 message: 'What should Echo call you?',
-                default: config.get('userName') || 'Friend'
+                default: config.get('userName') || 'Friend',
+                validate: (input) => input.trim() ? true : 'Name cannot be empty.'
               }
             ]);
             config.set('userName', newName);
-            console.log(chalk.green(`✓ Echo will now call you ${newName}.`));
+            console.log(chalk.green(`\n✓ Echo will now call you ${chalk.cyan(newName)}.`));
             break;
 
           case 'voice':
+            console.log(chalk.cyan.bold('\n🎙️  Voice Recognition Settings\n'));
             const { voiceProvider } = await inquirer.prompt([
               {
                 type: 'list',
                 name: 'voiceProvider',
                 message: 'Select Voice Recognition Engine:',
                 choices: [
-                  { name: '🌐 Browser API (Fast, Free, No key needed)', value: 'browser' },
-                  { name: '☁️  Whisper Cloud (Top-tier, Requires OpenAI key)', value: 'whisper' },
-                  { name: '🏠 Whisper Local (Privacy, One-time Setup)', value: 'whisper-local' }
+                  { name: '🌐 Browser API  (Native, Fast, Free)', value: 'browser', short: 'Browser API' },
+                  { name: '☁️  Whisper Cloud  (Best Accuracy, OpenAI Key)', value: 'whisper', short: 'Whisper Cloud' },
+                  { name: '🏠 Whisper Local  (Privacy, Offline)', value: 'whisper-local', short: 'Whisper Local' }
                 ],
-                default: config.get('voiceProvider') || 'browser'
+                default: ['browser', 'whisper', 'whisper-local'].indexOf(config.get('voiceProvider')) || 0,
+                pageSize: 3
               }
             ]);
-            
+
             if (voiceProvider === 'whisper' && (!config.get('apiKeys') || !config.get('apiKeys').openai)) {
-              console.log(chalk.yellow('\n⚠️  Whisper requires an OpenAI API key.'));
+              console.log(chalk.yellow('\n⚠️  Whisper Cloud requires an OpenAI API key.\n'));
               const { openAIKey } = await inquirer.prompt([
                 {
                   type: 'input',
                   name: 'openAIKey',
                   message: 'Enter your OpenAI API Key:',
-                  validate: (i) => i.trim() ? true : 'Key is required for Whisper.'
+                  validate: (i) => i.trim() ? true : 'Key is required for Whisper.',
+                  mask: '*'
                 }
               ]);
               const keys = config.get('apiKeys') || {};
@@ -234,63 +254,66 @@ program
               await setup();
             } else {
               config.set('voiceProvider', voiceProvider);
-              console.log(chalk.green(`✓ Voice engine set to ${voiceProvider === 'whisper' ? 'Whisper Cloud' : 'Browser API'}.`));
+              console.log(chalk.green(`\n✓ Voice engine set to ${voiceProvider === 'whisper' ? 'Whisper Cloud' : 'Browser API'}.`));
             }
             break;
 
           case 'memory':
+            console.log(chalk.cyan.bold('\n🧠 Memory Management\n'));
+            const memEnabled = config.get('memoryEnabled') !== false;
             const memAction = await inquirer.prompt([
               {
                 type: 'list',
                 name: 'type',
-                message: 'Memory Management:',
+                message: 'Select Action:',
                 choices: [
-                  { name: config.get('memoryEnabled') !== false ? '🔴 Disable Memory' : '🟢 Enable Memory', value: 'toggle' },
-                  { name: '🗑️  Clear All Memory', value: 'clear' },
-                  { name: '⬅️  Back', value: 'back' }
-                ]
+                  { name: memEnabled ? '🔴 Disable Memory' : '🟢 Enable Memory', value: 'toggle', short: memEnabled ? 'Disable' : 'Enable' },
+                  { name: '🗑️  Clear All Memory', value: 'clear', short: 'Clear Memory' },
+                  { name: '⬅️  Back', value: 'back', short: 'Back' }
+                ],
+                pageSize: 3
               }
             ]);
-            
+
             if (memAction.type === 'toggle') {
                 const current = config.get('memoryEnabled') !== false;
                 config.set('memoryEnabled', !current);
-                console.log(chalk.green(`✓ Conversational memory is now ${!current ? 'Enabled' : 'Disabled'}.`));
+                console.log(chalk.green(`\n✓ Conversational memory is now ${!current ? chalk.green('Enabled') : chalk.red('Disabled')}.`));
             } else if (memAction.type === 'clear') {
                 const confirm = await inquirer.prompt([
                     {
                         type: 'confirm',
                         name: 'sure',
-                        message: chalk.red.bold('Are you absolutely sure? Echo will lose all its personal memory and conversation history about you.'),
+                        message: chalk.red.bold('⚠️  Are you sure? Echo will lose all memory and conversation history.'),
                         default: false
                     }
                 ]);
                 if (confirm.sure) {
                     const MemoryManager = require('./scripts/memory-manager');
                     new MemoryManager().clearMemory();
-                    console.log(chalk.green('✓ Local memory has been purified, sir.'));
+                    console.log(chalk.green('\n✓ All memory has been cleared.'));
                 }
             }
             break;
 
           case 'plugins':
-            // Redirect to the existing plugins interactive logic
-            console.log(chalk.cyan('\nRedirecting to Plugin Manager...'));
+            console.log(chalk.cyan.bold('\n🧩 Plugin Management\n'));
             const PluginManager = require('./scripts/plugin-manager');
             const generator = require('./scripts/plugin-generator');
             const pm = new PluginManager();
             const allPlugins = pm.listPlugins();
-            
+
             const { pluginAction } = await inquirer.prompt([
                 {
                     type: 'list',
                     name: 'pluginAction',
-                    message: 'Plugin Management:',
+                    message: 'Select Action:',
                     choices: [
-                        { name: '✅ Toggle Plugins', value: 'toggle' },
-                        { name: '🛠️  Create New Plugin', value: 'create' },
-                        { name: '⬅️  Back', value: 'back' }
-                    ]
+                        { name: '✅ Toggle Plugins', value: 'toggle', short: 'Toggle' },
+                        { name: '🛠️  Create New Plugin', value: 'create', short: 'Create' },
+                        { name: '⬅️  Back', value: 'back', short: 'Back' }
+                    ],
+                    pageSize: 3
                 }
             ]);
 
@@ -304,104 +327,116 @@ program
                 {
                   type: 'checkbox',
                   name: 'enabledPlugins',
-                  message: 'Toggle Plugins:',
+                  message: 'Toggle Plugins (Space to select, Enter to confirm):',
                   choices: allPlugins.map(p => ({
-                    name: `${p.name} (${p.description})`,
+                    name: `${p.name} - ${p.description || 'Plugin'}`,
                     value: p.name,
                     checked: p.enabled
-                  }))
+                  })),
+                  pageSize: Math.min(allPlugins.length, 8)
                 }
             ]);
             config.set('plugins', pluginAnswers.enabledPlugins);
-            console.log(chalk.green('✓ Plugin configuration updated.'));
-            case 'startup':
+            console.log(chalk.green('\n✓ Plugin configuration updated.'));
+            break;
+
+          case 'startup':
             const currentStartup = config.get('startOnBoot') === true;
+            console.log(chalk.cyan.bold('\n🚀 Startup Settings\n'));
             const startupConfirm = await inquirer.prompt([
                 {
                     type: 'confirm',
                     name: 'enable',
-                    message: currentStartup ? 'Echo is set to start on boot. Would you like to disable this?' : 'Would you like Echo to start automatically when you log in?',
+                    message: currentStartup 
+                        ? 'Echo is set to start on boot. Would you like to disable this?' 
+                        : 'Would you like Echo to start automatically when you log in?',
                     default: !currentStartup
                 }
             ]);
             config.set('startOnBoot', currentStartup ? !startupConfirm.enable : startupConfirm.enable);
-            console.log(chalk.green(`✓ Startup preference updated.`));
+            console.log(chalk.green(`\n✓ Startup preference: ${currentStartup && startupConfirm.enable ? chalk.red('Disabled') : chalk.green('Enabled')}.`));
             break;
 
           case 'ai':
             const AI_MODELS = require('./scripts/ai-models');
             const currentProvider = config.get('aiProvider') || 'google';
             const providerData = AI_MODELS[currentProvider];
-            
+
             if (!providerData) {
-                console.log(chalk.red('⚠️ Invalid provider configured. Please run "echo-ai setup".'));
+                console.log(chalk.red('\n⚠️  Invalid provider configured. Please run "echo-ai setup".'));
                 break;
             }
 
+            console.log(chalk.cyan.bold(`\n🤖 AI Model Selection - ${providerData.name}\n`));
             const { selectedModel } = await inquirer.prompt([
               {
                 type: 'list',
                 name: 'selectedModel',
-                message: `Select model for ${providerData.name}:`,
+                message: `Select Model:`,
                 choices: providerData.models.map(m => ({
-                    name: m.name + (m.id === config.get('model') ? chalk.green(' (Active)') : ''),
-                    value: m.id
+                    name: m.name + chalk.gray(` - ${m.description || 'Default model'}`),
+                    value: m.id,
+                    short: m.name
                 })),
-                default: config.get('model')
+                default: providerData.models.findIndex(m => m.id === config.get('model')) || 0,
+                pageSize: providerData.models.length
               }
             ]);
-            
+
             config.set('model', selectedModel);
-            console.log(chalk.green(`✓ Active model set to ${selectedModel}.`));
+            console.log(chalk.green(`\n✓ Active model set to ${chalk.cyan(selectedModel)}.`));
             break;
 
           case 'reset':
+            console.log(chalk.cyan.bold('\n⚠️  Reset Configuration\n'));
             const resetConfirm = await inquirer.prompt([
                 {
                     type: 'confirm',
                     name: 'sure',
-                    message: chalk.red('Reset all settings to factory defaults? (This will NOT clear memory history)'),
+                    message: chalk.red.bold('Reset all settings to factory defaults? (Memory will be preserved)'),
                     default: false
                 }
             ]);
             if (resetConfirm.sure) {
                 config.clear();
-                console.log(chalk.green('✓ System reset to defaults.'));
+                console.log(chalk.green('\n✓ System reset to factory defaults.'));
             }
             break;
-            
+
           case 'autoupdate':
             const currentAutoUpdate = config.get('autoUpdateCheck') !== false;
+            console.log(chalk.cyan.bold('\n🔄 Auto-Update Settings\n'));
             const autoUpdateConfirm = await inquirer.prompt([
                 {
                     type: 'confirm',
                     name: 'enable',
-                    message: currentAutoUpdate 
-                        ? 'Auto-update check is enabled. Would you like to disable it?' 
+                    message: currentAutoUpdate
+                        ? 'Auto-update check is enabled. Would you like to disable it?'
                         : 'Would you like Echo to automatically check for updates on startup?',
                     default: !currentAutoUpdate
                 }
             ]);
             config.set('autoUpdateCheck', currentAutoUpdate ? !autoUpdateConfirm.enable : autoUpdateConfirm.enable);
-            console.log(chalk.green(`✓ Auto-update check ${currentAutoUpdate && autoUpdateConfirm.enable ? 'disabled' : 'enabled'}.`));
+            console.log(chalk.green(`\n✓ Auto-update check ${currentAutoUpdate && autoUpdateConfirm.enable ? chalk.red('Disabled') : chalk.green('Enabled')}.`));
             break;
 
           case 'notify':
             const currentNotify = config.get('startupNotification') !== false;
+            console.log(chalk.cyan.bold('\n🔔 Notification Settings\n'));
             const notifyConfirm = await inquirer.prompt([
                 {
                     type: 'confirm',
                     name: 'enable',
-                    message: currentNotify 
-                        ? 'Startup notifications are enabled. Would you like to disable them?' 
+                    message: currentNotify
+                        ? 'Startup notifications are enabled. Would you like to disable them?'
                         : 'Would you like Echo to notify you when it starts up?',
                     default: !currentNotify
                 }
             ]);
             config.set('startupNotification', currentNotify ? !notifyConfirm.enable : notifyConfirm.enable);
-            console.log(chalk.green(`✓ Startup notifications ${currentNotify && notifyConfirm.enable ? 'disabled' : 'enabled'}.`));
+            console.log(chalk.green(`\n✓ Startup notifications ${currentNotify && notifyConfirm.enable ? chalk.red('Disabled') : chalk.green('Enabled')}.`));
             break;
-            
+
           case 'workflows':
             const workflowManager = require('./scripts/workflow-manager-cli');
             await workflowManager.run();
