@@ -208,7 +208,7 @@ class Scheduler {
      */
     showReminder(task) {
         const message = task.action || task.name;
-        
+
         try {
             const NotificationManager = require('./notification-manager');
             const notifier = new NotificationManager();
@@ -216,12 +216,21 @@ class Scheduler {
         } catch (error) {
             // Fallback to console if notification fails
             console.log(`\n⏰ REMINDER: ${message}\n`);
-            
-            // Try system notification as fallback
+
+            // Try system notification as fallback with proper sanitization
+            const sanitizedMessage = message.replace(/"/g, '\\"').replace(/\\/g, '\\\\');
+
             if (process.platform === 'win32') {
-                exec(`msg * "Echo Reminder: ${message}"`);
+                // Use execFile to prevent command injection
+                const { execFile } = require('child_process');
+                execFile('msg', ['*', `Echo Reminder: ${message}`], (err) => {
+                    if (err) console.error('Reminder notification failed:', err.message);
+                });
             } else if (process.platform === 'darwin') {
-                exec(`osascript -e 'display notification "${message}" with title "Echo Reminder"'`);
+                const { execFile } = require('child_process');
+                execFile('osascript', ['-e', `display notification "${sanitizedMessage}" with title "Echo Reminder"`], (err) => {
+                    if (err) console.error('Reminder notification failed:', err.message);
+                });
             }
         }
     }
@@ -236,7 +245,7 @@ class Scheduler {
     /**
      * Run a workflow
      */
-    runWorkflow(task) {
+    async runWorkflow(task) {
         const ConfigManager = require('./config-manager');
         const config = new ConfigManager();
         const workflows = config.get('workflows') || {};
@@ -248,25 +257,29 @@ class Scheduler {
         }
 
         console.log(`Running workflow: ${task.action}`);
-        
-        // Execute workflow actions
+
+        // Execute workflow actions sequentially with proper await
         const SystemActions = require('../services/system');
-        workflow.forEach(async (action) => {
-            switch (action.type) {
-                case 'app':
-                    await SystemActions.openApp(action.value);
-                    break;
-                case 'url':
-                    await SystemActions.openUrl(action.value);
-                    break;
-                case 'search':
-                    await SystemActions.searchWeb(action.value);
-                    break;
-                case 'command':
-                    await SystemActions.executeCommand(action.value);
-                    break;
+        for (const action of workflow) {
+            try {
+                switch (action.type) {
+                    case 'app':
+                        await SystemActions.openApp(action.value);
+                        break;
+                    case 'url':
+                        await SystemActions.openUrl(action.value);
+                        break;
+                    case 'search':
+                        await SystemActions.searchWeb(action.value);
+                        break;
+                    case 'command':
+                        await SystemActions.executeCommand(action.value);
+                        break;
+                }
+            } catch (error) {
+                console.error(`Workflow action failed: ${action.type} ${action.value}`, error);
             }
-        });
+        }
     }
 
     /**

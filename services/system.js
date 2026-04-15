@@ -1,4 +1,4 @@
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
@@ -15,21 +15,27 @@ const SystemActions = {
                 return resolve({ success: false, error: 'Security Alert: Invalid characters in application name.' });
             }
 
-            let command;
-            
             if (platform === 'win32') {
-                command = `start ${appName}`;
+                execFile('cmd', ['/c', 'start', '', appName], (err) => {
+                    if (err) resolve({ success: false, error: err.message });
+                    else resolve({ success: true });
+                });
             } else if (platform === 'darwin') {
-                command = `open -a "${appName}"`;
+                execFile('open', ['-a', appName], (err) => {
+                    if (err) resolve({ success: false, error: err.message });
+                    else resolve({ success: true });
+                });
             } else {
                 // Linux
-                command = `xdg-open ${appName} || gnome-open ${appName}`;
+                execFile('xdg-open', [appName], (err) => {
+                    if (err) {
+                        // Fallback to xdg-open only
+                        resolve({ success: false, error: err.message });
+                    } else {
+                        resolve({ success: true });
+                    }
+                });
             }
-            
-            exec(command, (err) => {
-                if (err) resolve({ success: false, error: err.message });
-                else resolve({ success: true });
-            });
         });
     },
 
@@ -38,20 +44,29 @@ const SystemActions = {
         const sanitizedQuery = encodeURIComponent(query);
         const url = `https://www.google.com/search?q=${sanitizedQuery}`;
         return new Promise((resolve) => {
-            let command;
-            
             if (platform === 'win32') {
-                command = `start chrome "${url}" || start "${url}"`;
+                execFile('cmd', ['/c', 'start', 'chrome', url], (err) => {
+                    if (err) {
+                        // Fallback to default browser
+                        execFile('cmd', ['/c', 'start', url], (fallbackErr) => {
+                            if (fallbackErr) resolve({ success: false, error: fallbackErr.message });
+                            else resolve({ success: true });
+                        });
+                    } else {
+                        resolve({ success: true });
+                    }
+                });
             } else if (platform === 'darwin') {
-                command = `open "${url}"`;
+                execFile('open', [url], (err) => {
+                    if (err) resolve({ success: false, error: err.message });
+                    else resolve({ success: true });
+                });
             } else {
-                command = `xdg-open "${url}" || gnome-open "${url}"`;
+                execFile('xdg-open', [url], (err) => {
+                    if (err) resolve({ success: false, error: err.message });
+                    else resolve({ success: true });
+                });
             }
-            
-            exec(command, (err) => {
-                if (err) resolve({ success: false, error: err.message });
-                else resolve({ success: true });
-            });
         });
     },
 
@@ -128,27 +143,47 @@ const SystemActions = {
     // Open URL in default browser
     openUrl: (url) => {
         return new Promise((resolve) => {
-            let command;
-            
-            if (platform === 'win32') {
-                command = `start ${url}`;
-            } else if (platform === 'darwin') {
-                command = `open "${url}"`;
-            } else {
-                command = `xdg-open "${url}"`;
+            // Validate URL protocol to prevent javascript: and file: schemes
+            try {
+                const parsedUrl = new URL(url);
+                if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+                    return resolve({ success: false, error: 'Only http and https protocols are allowed' });
+                }
+            } catch {
+                return resolve({ success: false, error: 'Invalid URL format' });
             }
-            
-            exec(command, (err) => {
-                if (err) resolve({ success: false, error: err.message });
-                else resolve({ success: true });
-            });
+
+            if (platform === 'win32') {
+                execFile('cmd', ['/c', 'start', url], (err) => {
+                    if (err) resolve({ success: false, error: err.message });
+                    else resolve({ success: true });
+                });
+            } else if (platform === 'darwin') {
+                execFile('open', [url], (err) => {
+                    if (err) resolve({ success: false, error: err.message });
+                    else resolve({ success: true });
+                });
+            } else {
+                execFile('xdg-open', [url], (err) => {
+                    if (err) resolve({ success: false, error: err.message });
+                    else resolve({ success: true });
+                });
+            }
         });
     },
 
     // Execute custom shell command (use with caution)
+    // NOTE: This is intentionally restricted - AI-triggered commands are validated by InputValidator
     executeCommand: (command) => {
         return new Promise((resolve) => {
-            exec(command, (err, stdout, stderr) => {
+            // Split command into program and arguments safely
+            // On Windows, use cmd /c; on Unix, use sh -c
+            const args = platform === 'win32'
+                ? ['/c', command]
+                : ['-c', command];
+            const program = platform === 'win32' ? 'cmd' : 'sh';
+
+            execFile(program, args, { timeout: 30000 }, (err, stdout, stderr) => {
                 if (err) {
                     resolve({ success: false, error: err.message, stderr });
                 } else {
@@ -184,23 +219,43 @@ const SystemActions = {
     takeScreenshot: () => {
         return new Promise((resolve) => {
             const screenshotPath = path.join(os.homedir(), 'Desktop', `screenshot-${Date.now()}.png`);
-            let command;
-            
+
             if (platform === 'win32') {
-                // Windows: Use PowerShell
-                command = `powershell -command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('%{PRTSC}')"`;
+                // Windows: Use PowerShell to capture and save screenshot properly
+                const psScript = `
+                    Add-Type -AssemblyName System.Windows.Forms;
+                    $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds;
+                    $bitmap = New-Object System.Drawing.Bitmap($screen.Width, $screen.Height);
+                    $graphics = [System.Drawing.Graphics]::FromImage($bitmap);
+                    $graphics.CopyFromScreen($screen.Location, [System.Drawing.Point]::Empty, $screen.Size);
+                    $bitmap.Save('${screenshotPath.replace(/\\/g, '\\\\')}');
+                    $graphics.Dispose();
+                    $bitmap.Dispose();
+                `;
+                execFile('powershell', ['-NoProfile', '-NonInteractive', '-Command', psScript], (err) => {
+                    if (err) resolve({ success: false, error: err.message });
+                    else resolve({ success: true, path: screenshotPath });
+                });
             } else if (platform === 'darwin') {
                 // macOS: Use screencapture
-                command = `screencapture "${screenshotPath}"`;
+                execFile('screencapture', [screenshotPath], (err) => {
+                    if (err) resolve({ success: false, error: err.message });
+                    else resolve({ success: true, path: screenshotPath });
+                });
             } else {
                 // Linux: Use scrot or gnome-screenshot
-                command = `scrot "${screenshotPath}" || gnome-screenshot -f "${screenshotPath}"`;
+                execFile('scrot', [screenshotPath], (err) => {
+                    if (err) {
+                        // Fallback to gnome-screenshot
+                        execFile('gnome-screenshot', ['-f', screenshotPath], (gnomeErr) => {
+                            if (gnomeErr) resolve({ success: false, error: gnomeErr.message });
+                            else resolve({ success: true, path: screenshotPath });
+                        });
+                    } else {
+                        resolve({ success: true, path: screenshotPath });
+                    }
+                });
             }
-            
-            exec(command, (err) => {
-                if (err) resolve({ success: false, error: err.message });
-                else resolve({ success: true, path: screenshotPath });
-            });
         });
     }
 };
