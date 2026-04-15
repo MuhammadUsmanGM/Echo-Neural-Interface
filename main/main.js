@@ -6,6 +6,7 @@ const SystemActions = require('../services/system');
 const ConfigManager = require('../scripts/config-manager');
 const PluginManager = require('../scripts/plugin-manager');
 const Scheduler = require('../scripts/scheduler');
+const { getValidator } = require('../utils/input-validator');
 const { CHANNELS, THEMES, COMMANDS, MESSAGES } = require('../utils/constants');
 require('dotenv').config();
 
@@ -15,6 +16,7 @@ let isQuitting = false;
 let brain;
 let whisper;
 let scheduler;
+let validator;
 const config = new ConfigManager();
 const pluginManager = new PluginManager();
 
@@ -303,7 +305,10 @@ process.on('unhandledRejection', (reason, promise) => {
 app.whenReady().then(async () => {
     await initializeBrain();
     createWindow();
-    
+
+    // Initialize validator for security checks
+    validator = getValidator();
+
     // Initialize scheduler for background tasks
     try {
         scheduler = new Scheduler();
@@ -333,6 +338,11 @@ app.whenReady().then(async () => {
 app.on('will-quit', () => {
     // Unregister all shortcuts
     globalShortcut.unregisterAll();
+    
+    // Stop scheduler to prevent memory leaks
+    if (scheduler && typeof scheduler.stop === 'function') {
+        scheduler.stop();
+    }
 });
 
 // Handle voice/text commands from the UI
@@ -357,25 +367,43 @@ ipcMain.handle('process-input', async (event, text) => {
             if (isBaseTool) {
                 let actionResult;
                 const lowerCmd = cmd.toLowerCase();
-                
+
+                // Security: Validate command before execution
+                try {
+                    validator.validateSystemCommand(lowerCmd, args);
+                } catch (validationError) {
+                    console.warn('Command validation failed:', validationError.message);
+                    return { success: false, text: `Security: ${validationError.message}` };
+                }
+
                 // Handle Structured Commands (New)
                 if (lowerCmd === 'create_folder') {
-                    const path = args.path || (Array.isArray(args) ? args[0] : args);
-                    actionResult = await SystemActions.createFolder(path);
+                    const folderPath = args.path || (Array.isArray(args) ? args[0] : args);
+                    actionResult = await SystemActions.createFolder(folderPath);
                 } else if (lowerCmd === 'write_file') {
-                    const path = args.path;
+                    const filePath = args.path;
                     const content = args.content;
                     if (path && content) {
-                         actionResult = await SystemActions.writeFile(path, content);
+                         try {
+                             validator.validateFilePath(filePath);
+                             actionResult = await SystemActions.writeFile(filePath, content);
+                         } catch (validationError) {
+                             actionResult = { success: false, error: `Security: ${validationError.message}` };
+                         }
                     } else {
                          actionResult = { success: false, error: 'Missing path or content' };
                     }
                 } else if (lowerCmd === 'read_file') {
-                     const path = args.path || (Array.isArray(args) ? args[0] : args);
-                     actionResult = await SystemActions.readFile(path);
-                     if (actionResult.success) {
-                         // Send content back to AI? For now just log/notify
-                         console.log("File content read:", actionResult.content.substring(0, 50) + "...");
+                     const filePath = args.path || (Array.isArray(args) ? args[0] : args);
+                     try {
+                         validator.validateFilePath(filePath);
+                         actionResult = await SystemActions.readFile(filePath);
+                         if (actionResult.success) {
+                             // Send content back to AI? For now just log/notify
+                             console.log("File content read:", actionResult.content.substring(0, 50) + "...");
+                         }
+                     } catch (validationError) {
+                         actionResult = { success: false, error: `Security: ${validationError.message}` };
                      }
                 } else if (lowerCmd === 'run_terminal_command') {
                      const termCmd = args.command || args;
@@ -449,8 +477,15 @@ ipcMain.handle('transcribe-audio', async (event, audioBuffer) => {
     if (!whisper) {
         // Fallback to re-init if whisper was missing
         const apiKeys = config.get('apiKeys') || {};
-        if (apiKeys.openai) {
-            whisper = new WhisperService(apiKeys.openai);
+        const voiceProvider = config.get('voiceProvider') || 'browser';
+        if (voiceProvider === 'whisper' && apiKeys.openai) {
+            whisper = new WhisperService({ mode: 'cloud', apiKey: apiKeys.openai });
+        } else if (voiceProvider === 'whisper-local') {
+            whisper = new WhisperService({
+                mode: 'local',
+                localPath: config.get('localWhisperPath'),
+                modelPath: config.get('localWhisperModel')
+            });
         } else {
             return { success: false, error: "OpenAI API Key missing for Whisper." };
         }

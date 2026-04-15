@@ -143,13 +143,24 @@ class Scheduler {
      * Start the scheduler loop
      */
     startScheduler() {
-        // Check every minute for tasks to run
-        setInterval(() => {
+        // Store interval ID for proper cleanup
+        this.intervalId = setInterval(() => {
             this.checkAndRunTasks();
         }, 60000); // 60 seconds
 
         // Also check immediately
         this.checkAndRunTasks();
+    }
+
+    /**
+     * Stop the scheduler and clean up
+     */
+    stop() {
+        if (this.intervalId) {
+            clearInterval(this.intervalId);
+            this.intervalId = null;
+            console.log('Scheduler stopped');
+        }
     }
 
     /**

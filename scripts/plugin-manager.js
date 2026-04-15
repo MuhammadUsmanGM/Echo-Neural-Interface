@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 const ConfigManager = require('./config-manager');
 
 class PluginManager {
@@ -7,7 +8,7 @@ class PluginManager {
         this.config = new ConfigManager();
         this.plugins = new Map();
         this.pluginDir = path.join(__dirname, '..', 'plugins');
-        
+
         // Create plugins directory if it doesn't exist
         if (!fs.existsSync(this.pluginDir)) {
             fs.mkdirSync(this.pluginDir, { recursive: true });
@@ -19,17 +20,17 @@ class PluginManager {
      */
     async loadPlugins() {
         const enabledPlugins = this.config.get('plugins') || [];
-        
+
         try {
             const files = fs.readdirSync(this.pluginDir);
-            
+
             for (const file of files) {
                 if (file.endsWith('.js')) {
                     const pluginPath = path.join(this.pluginDir, file);
                     await this.loadPlugin(pluginPath);
                 }
             }
-            
+
             console.log(`Loaded ${this.plugins.size} plugin(s)`);
         } catch (error) {
             console.error('Error loading plugins:', error);
@@ -37,27 +38,70 @@ class PluginManager {
     }
 
     /**
-     * Load a single plugin
+     * Load a single plugin with VM sandboxing for security
      */
     async loadPlugin(pluginPath) {
         try {
-            const plugin = require(pluginPath);
-            
-            // Validate plugin structure
+            const pluginCode = fs.readFileSync(pluginPath, 'utf8');
+
+            // Validate plugin structure before execution
+            if (!pluginCode.includes('name') || !pluginCode.includes('commands')) {
+                throw new Error('Invalid plugin structure. Must have name and commands.');
+            }
+
+            // Check if plugin is enabled
+            const enabledPlugins = this.config.get('plugins') || [];
+
+            // Execute plugin code in a sandboxed VM context
+            const sandbox = {
+                module: { exports: {} },
+                exports: {},
+                require: (moduleName) => {
+                    // Only allow safe modules
+                    const allowedModules = ['fs', 'path', 'os', 'crypto', 'util', 'events', 'stream', 'buffer'];
+                    if (allowedModules.includes(moduleName)) {
+                        return require(moduleName);
+                    }
+                    throw new Error(`Module '${moduleName}' is not allowed in plugin sandbox`);
+                },
+                console: {
+                    log: (...args) => console.log(`[Plugin]`, ...args),
+                    error: (...args) => console.error(`[Plugin]`, ...args),
+                    warn: (...args) => console.warn(`[Plugin]`, ...args)
+                },
+                process: {
+                    platform: process.platform,
+                    env: { NODE_ENV: process.env.NODE_ENV }
+                }
+            };
+
+            // Create and run the plugin in a VM context
+            const context = vm.createContext(sandbox);
+            vm.runInContext(pluginCode, context, {
+                filename: pluginPath,
+                timeout: 5000 // 5 second timeout to prevent infinite loops during load
+            });
+
+            const plugin = sandbox.module.exports;
+
+            // Validate plugin structure after execution
             if (!plugin.name || !plugin.commands) {
                 throw new Error('Invalid plugin structure. Must have name and commands.');
             }
-            
-            // Check if plugin is enabled
-            const enabledPlugins = this.config.get('plugins') || [];
+
+            // Validate plugin name format
+            if (!/^[a-zA-Z0-9_-]+$/.test(plugin.name)) {
+                throw new Error('Plugin name can only contain letters, numbers, dashes, and underscores.');
+            }
+
             if (!enabledPlugins.includes(plugin.name)) {
                 console.log(`Plugin ${plugin.name} is disabled. Skipping...`);
                 return;
             }
-            
+
             this.plugins.set(plugin.name, plugin);
             console.log(`Loaded plugin: ${plugin.name} v${plugin.version || '1.0.0'}`);
-            
+
             // Run plugin initialization if it exists
             if (plugin.init && typeof plugin.init === 'function') {
                 await plugin.init();
