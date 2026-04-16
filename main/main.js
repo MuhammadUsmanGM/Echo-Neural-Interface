@@ -196,6 +196,12 @@ function createWindow() {
 
     // Register global hotkey
     const hotkey = config.get('hotkey') || 'CommandOrControl+Shift+E';
+
+    // Unregister previous hotkey if already registered
+    if (globalShortcut.isRegistered(hotkey)) {
+        globalShortcut.unregister(hotkey);
+    }
+
     globalShortcut.register(hotkey, () => {
         if (mainWindow) {
             if (mainWindow.isVisible()) {
@@ -257,6 +263,7 @@ function createWindow() {
             tray.setContextMenu(trayMenu);
             
             tray.on('click', () => {
+                if (!mainWindow || mainWindow.isDestroyed()) return;
                 if (mainWindow.isVisible()) {
                     mainWindow.hide();
                 } else {
@@ -304,6 +311,17 @@ process.on('unhandledRejection', (reason, promise) => {
 // Initialize system
 app.whenReady().then(async () => {
     await initializeBrain();
+
+    // Check if brain was initialized successfully
+    if (!brain) {
+        const provider = config.get('aiProvider') || 'google';
+        const dialog = require('electron').dialog;
+        dialog.showErrorBox(
+            'Echo AI - API Key Missing',
+            `No API key found for provider: ${provider}\n\nPlease run 'echo setup' to configure your AI provider.`
+        );
+    }
+
     createWindow();
 
     // Initialize validator for security checks
@@ -383,7 +401,7 @@ ipcMain.handle('process-input', async (event, text) => {
                 } else if (lowerCmd === 'write_file') {
                     const filePath = args.path;
                     const content = args.content;
-                    if (path && content) {
+                    if (filePath && content) {
                          try {
                              validator.validateFilePath(filePath);
                              actionResult = await SystemActions.writeFile(filePath, content);

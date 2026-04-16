@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { app } = require('electron');
 const { execFile } = require('child_process');
 
@@ -26,7 +27,8 @@ class WhisperService {
         }
 
         const tempDir = app.getPath('temp');
-        const tempFilePath = path.join(tempDir, `echo_voice_${Date.now()}.wav`);
+        const uniqueId = crypto.randomBytes(8).toString('hex');
+        const tempFilePath = path.join(tempDir, `echo_voice_${uniqueId}.wav`);
         
         try {
             fs.writeFileSync(tempFilePath, audioBuffer);
@@ -58,28 +60,28 @@ class WhisperService {
         }
 
         const tempDir = app.getPath('temp');
-        const inputPath = path.join(tempDir, `echo_in_${Date.now()}.wav`);
-        
-        try {
-            // Note: For whisper.cpp local, we MUST have a 16kHz WAV.
-            // In a production app, we would use ffmpeg here to ensure format.
-            // For now, we assume the buffer is compatible or provided correctly.
-            fs.writeFileSync(inputPath, audioBuffer);
+        const uniqueId = crypto.randomBytes(8).toString('hex');
+        const inputPath = path.join(tempDir, `echo_in_${uniqueId}.wav`);
 
-            return new Promise((resolve, reject) => {
-                const args = ['-m', this.modelPath, '-f', inputPath, '-nt'];
-                execFile(this.localPath, args, (error, stdout, stderr) => {
-                    if (error) {
-                        return reject(new Error('Local Whisper Error: ' + stderr));
-                    }
-                    // whisper.cpp output often contains timestamps like [00:00:00.000 -> 00:00:02.000]
-                    const cleanOutput = stdout.replace(/\[\d{2}:\d{2}:\d{2}\.\d{3}\s+->\s+\d{2}:\d{2}:\d{2}\.\d{3}\]\s+/g, '').trim();
-                    resolve(cleanOutput);
-                });
+        // Note: For whisper.cpp local, we MUST have a 16kHz WAV.
+        // In a production app, we would use ffmpeg here to ensure format.
+        // For now, we assume the buffer is compatible or provided correctly.
+        fs.writeFileSync(inputPath, audioBuffer);
+
+        return new Promise((resolve, reject) => {
+            const args = ['-m', this.modelPath, '-f', inputPath, '-nt'];
+            execFile(this.localPath, args, (error, stdout, stderr) => {
+                // Clean up temp file after exec completes
+                try { if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath); } catch (e) { /* ignore cleanup errors */ }
+
+                if (error) {
+                    return reject(new Error('Local Whisper Error: ' + stderr));
+                }
+                // whisper.cpp output often contains timestamps like [00:00:00.000 -> 00:00:02.000]
+                const cleanOutput = stdout.replace(/\[\d{2}:\d{2}:\d{2}\.\d{3}\s+->\s+\d{2}:\d{2}:\d{2}\.\d{3}\]\s+/g, '').trim();
+                resolve(cleanOutput);
             });
-        } finally {
-            if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-        }
+        });
     }
 }
 

@@ -124,12 +124,13 @@ class AnthropicBrain {
                     'Content-Type': 'application/json',
                     'x-api-key': this.apiKey,
                     'anthropic-version': '2023-06-01',
-                    'Content-Length': data.length
+                    'Content-Length': Buffer.byteLength(data)
                 }
             };
 
             let fullText = '';
             let toolCall = null;
+            let toolCallInput = '';
 
             const req = https.request(options, (res) => {
                 if (res.statusCode < 200 || res.statusCode >= 300) {
@@ -162,26 +163,43 @@ class AnthropicBrain {
                                             onProgress(delta.text);
                                         }
                                     }
+
+                                    // Accumulate tool use input deltas
+                                    if (delta.type === 'input_json_delta' && delta.partial_json) {
+                                        toolCallInput += delta.partial_json;
+                                    }
                                 }
 
-                                // Handle tool use
+                                // Handle tool use block start
                                 if (parsed.type === 'content_block_start') {
                                     const block = parsed.content_block;
                                     if (block.type === 'tool_use') {
+                                        // Initialize tool call with name, input will be accumulated
                                         toolCall = {
                                             name: block.name,
-                                            args: block.input
+                                            args: null // Will be set at stream end
                                         };
                                     }
                                 }
                             } catch (e) {
-                                // Skip invalid JSON chunks
+                                // Log parse errors for debugging
+                                console.warn('Anthropic stream JSON parse error:', e.message);
                             }
                         }
                     }
                 });
 
                 res.on('end', () => {
+                    // Parse accumulated tool call input
+                    if (toolCall && toolCallInput) {
+                        try {
+                            toolCall.args = JSON.parse(toolCallInput);
+                        } catch (e) {
+                            console.error('Failed to parse Anthropic tool call args:', e);
+                            toolCall = null;
+                        }
+                    }
+
                     resolve({
                         text: fullText,
                         toolCall: toolCall
@@ -213,7 +231,7 @@ class AnthropicBrain {
                     'Content-Type': 'application/json',
                     'x-api-key': this.apiKey,
                     'anthropic-version': '2023-06-01',
-                    'Content-Length': data.length
+                    'Content-Length': Buffer.byteLength(data)
                 }
             };
 

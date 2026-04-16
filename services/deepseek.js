@@ -124,7 +124,7 @@ class DeepSeekBrain {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${this.apiKey}`,
-                    'Content-Length': data.length
+                    'Content-Length': Buffer.byteLength(data)
                 }
             };
 
@@ -176,7 +176,8 @@ class DeepSeekBrain {
                                     }
                                 }
                             } catch (e) {
-                                // Skip invalid JSON chunks
+                                // Log parse errors for debugging instead of silently ignoring
+                                console.warn('DeepSeek stream JSON parse error:', e.message);
                             }
                         }
                     }

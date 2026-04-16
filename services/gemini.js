@@ -64,7 +64,7 @@ class GeminiBrain {
             
             let fullText = '';
             let functionCall = null;
-            
+
             if (memoryEnabled) {
                 this.memory.saveMessage('user', userInput);
             }
@@ -73,12 +73,13 @@ class GeminiBrain {
                 const chunkText = chunk.text();
                 // Check if it's a function call (Gemini usually sends this in one go, but we check parts)
                 const calls = chunk.functionCalls();
-                
+
                 if (calls && calls.length > 0) {
                     functionCall = calls[0];
-                    break; // Stop streaming text if it's a tool call
+                    // Don't break - continue consuming the stream to avoid losing any subsequent text
+                    continue;
                 }
-                
+
                 if (chunkText) {
                     fullText += chunkText;
                     if (onProgress) onProgress(chunkText);
@@ -96,10 +97,12 @@ class GeminiBrain {
                     this.memory.saveMessage('model', fullText);
                 }
 
+                const isBaseTool = fnName === "execute_system_command";
+
                 return {
-                    type: 'action', // or plugin_action logic
-                    command: fnName,
-                    args: args, // Gemini args are already an object
+                    type: isBaseTool ? 'action' : 'plugin_action',
+                    command: isBaseTool ? (args.command || fnName) : fnName,
+                    args: isBaseTool ? (args.args || {}) : args,
                     text: fullText || "Processing action..."
                 };
             }
@@ -117,7 +120,7 @@ class GeminiBrain {
         } catch (error) {
             console.error("Gemini Error:", error);
             // Fallback for non-streaming or errors
-            return { success: false, text: "I encountered an error processing that, sir." };
+            return { type: 'speech', text: "I encountered an error processing that, sir." };
         }
     }
 }

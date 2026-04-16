@@ -1,6 +1,5 @@
 const winston = require('winston');
 const path = require('path');
-const { app } = require('electron');
 
 /**
  * Logger - Structured logging for Echo AI Agent
@@ -8,7 +7,19 @@ const { app } = require('electron');
  */
 class Logger {
   constructor() {
-    const logDir = app ? app.getPath('logs') : path.join(__dirname, '../logs');
+    // Try to get Electron app path, fallback to local logs directory
+    let logDir;
+    try {
+      const electron = require('electron');
+      if (electron && electron.app) {
+        logDir = electron.app.getPath('logs');
+      } else {
+        throw new Error('Electron app not available');
+      }
+    } catch (e) {
+      // Fallback to local logs directory for CLI context
+      logDir = path.join(__dirname, '../logs');
+    }
 
     // Define log format
     const logFormat = winston.format.combine(

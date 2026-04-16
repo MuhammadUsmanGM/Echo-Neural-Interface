@@ -139,7 +139,7 @@ class OpenAIBrain {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${this.apiKey}`,
-                    'Content-Length': data.length
+                    'Content-Length': Buffer.byteLength(data)
                 }
             };
 
@@ -193,7 +193,8 @@ class OpenAIBrain {
                                     }
                                 }
                             } catch (e) {
-                                // Skip invalid JSON chunks
+                                // Log parse errors for debugging instead of silently ignoring
+                                console.warn('OpenAI stream JSON parse error:', e.message);
                             }
                         }
                     }

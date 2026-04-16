@@ -122,7 +122,7 @@ class ErrorHandler {
   }
 
   /**
-   * Retry logic for transient failures
+   * Retry logic for transient failures with exponential backoff and jitter
    */
   async retry(fn, maxRetries = 3, delay = 1000, context = 'operation') {
     let lastError;
@@ -139,7 +139,10 @@ class ErrorHandler {
         });
 
         if (i < maxRetries - 1) {
-          await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+          // Exponential backoff with jitter to prevent thundering herd
+          const exponentialDelay = delay * Math.pow(2, i);
+          const jitter = Math.random() * 1000;
+          await new Promise(resolve => setTimeout(resolve, exponentialDelay + jitter));
         }
       }
     }

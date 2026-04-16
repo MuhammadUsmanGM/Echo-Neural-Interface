@@ -11,8 +11,8 @@ class MemoryManager {
 
         // Encryption setup
         this.algorithm = 'aes-256-cbc';
-        // Unique key based on machine info (simplified for local use)
-        this.key = crypto.scryptSync(os.hostname() + os.userInfo().username, 'echo-salt', 32);
+        // Use safeStorage key if available, otherwise fallback to machine-based key
+        this.key = this.deriveEncryptionKey();
 
         // Memory limits
         this.maxHistorySize = 1000; // Maximum messages to keep
@@ -21,6 +21,28 @@ class MemoryManager {
         this.maxTotalSize = 10 * 1024 * 1024; // 10MB max file size
 
         this.init();
+    }
+
+    /**
+     * Derive encryption key with improved security
+     * Uses safeStorage if available, otherwise uses machine-specific key
+     */
+    deriveEncryptionKey() {
+        try {
+            // Try to use Electron's safeStorage for a more secure key
+            const { safeStorage } = require('electron');
+            if (safeStorage && safeStorage.isEncryptionAvailable()) {
+                // Generate a stable key from safeStorage
+                const encrypted = safeStorage.encryptString('echo-memory-key-stable-seed');
+                return crypto.scryptSync(encrypted.toString('hex'), 'echo-salt-v2', 32);
+            }
+        } catch (e) {
+            // safeStorage not available, fallback to machine-based key
+        }
+
+        // Fallback: machine-based key (still better than nothing for local storage)
+        const machineInfo = os.hostname() + os.userInfo().username + os.platform();
+        return crypto.scryptSync(machineInfo, 'echo-salt-v2', 32);
     }
 
     init() {
@@ -115,7 +137,12 @@ class MemoryManager {
         try {
             const encryptedData = fs.readFileSync(this.historyFile, 'utf8');
             const decryptedData = this.decrypt(encryptedData);
-            return decryptedData ? JSON.parse(decryptedData) : [];
+            if (decryptedData === null) {
+                // Decryption failed - likely key mismatch
+                console.warn('Memory decryption failed. Data may be inaccessible due to key change.');
+                return [];
+            }
+            return JSON.parse(decryptedData);
         } catch (e) {
             console.error('Error reading history:', e);
             return [];
@@ -173,8 +200,8 @@ class MemoryManager {
         const lowerQuery = query.toLowerCase();
 
         return history.filter(msg => {
-            const text = msg.parts[0].text.toLowerCase();
-            return text.includes(lowerQuery);
+            const text = msg.parts?.[0]?.text?.toLowerCase();
+            return text && text.includes(lowerQuery);
         });
     }
 

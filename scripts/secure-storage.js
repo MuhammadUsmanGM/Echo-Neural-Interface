@@ -40,7 +40,9 @@ class SecureStorage {
           data: buffer.toString('base64')
         });
       } else {
-        // Fallback: base64 encoding (not secure, but better than plain text)
+        // Fallback: base64 encoding (NOT secure - just obfuscation)
+        console.warn(`SecureStorage: Storing '${key}' as base64 (NOT ENCRYPTED). ` +
+                     'File system access would expose this value.');
         this.store.set(key, {
           encrypted: false,
           data: Buffer.from(value).toString('base64')

@@ -73,9 +73,13 @@ const SystemActions = {
     // Cross-platform folder creation
     createFolder: (pathName) => {
         return new Promise((resolve) => {
+            // Basic path traversal prevention
+            if (pathName && pathName.includes('..')) {
+                return resolve({ success: false, error: 'Path traversal is not allowed' });
+            }
             // Use Node's fs instead of shell commands for better cross-platform support
-            const fullPath = path.isAbsolute(pathName) 
-                ? pathName 
+            const fullPath = path.isAbsolute(pathName)
+                ? pathName
                 : path.join(os.homedir(), 'Desktop', pathName);
             
             fs.mkdir(fullPath, { recursive: true }, (err) => {
@@ -88,6 +92,10 @@ const SystemActions = {
     // File operations
     copyFile: (source, destination) => {
         return new Promise((resolve) => {
+            // Basic path traversal prevention
+            if (source.includes('..') || destination.includes('..')) {
+                return resolve({ success: false, error: 'Path traversal is not allowed' });
+            }
             fs.copyFile(source, destination, (err) => {
                 if (err) resolve({ success: false, error: err.message });
                 else resolve({ success: true });
@@ -97,6 +105,10 @@ const SystemActions = {
 
     deleteFile: (filePath) => {
         return new Promise((resolve) => {
+            // Basic path traversal prevention
+            if (filePath.includes('..')) {
+                return resolve({ success: false, error: 'Path traversal is not allowed' });
+            }
             fs.unlink(filePath, (err) => {
                 if (err) resolve({ success: false, error: err.message });
                 else resolve({ success: true });
@@ -106,8 +118,12 @@ const SystemActions = {
 
     writeFile: (filePath, content) => {
         return new Promise((resolve) => {
-            const fullPath = path.isAbsolute(filePath) 
-                ? filePath 
+            // Basic path traversal prevention
+            if (filePath && filePath.includes('..')) {
+                return resolve({ success: false, error: 'Path traversal is not allowed' });
+            }
+            const fullPath = path.isAbsolute(filePath)
+                ? filePath
                 : path.join(os.homedir(), 'Desktop', filePath);
 
             fs.writeFile(fullPath, content, 'utf8', (err) => {
@@ -119,6 +135,10 @@ const SystemActions = {
 
     readFile: (filePath) => {
         return new Promise((resolve) => {
+            // Basic path traversal prevention
+            if (filePath && filePath.includes('..')) {
+                return resolve({ success: false, error: 'Path traversal is not allowed' });
+            }
             fs.readFile(filePath, 'utf8', (err, data) => {
                 if (err) resolve({ success: false, error: err.message });
                 else resolve({ success: true, content: data });

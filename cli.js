@@ -83,9 +83,14 @@ program
       console.log(`  ${chalk.bold('Active Model:')} ${c.model || 'Default'}`);
       
       console.log(chalk.yellow('\n🔑 Credentials'));
-      const apiKeys = c.apiKeys || {};
-      const currentKey = apiKeys[provider] || '(Not Set)';
-      const maskedKey = currentKey.length > 8 ? `${currentKey.substring(0, 4)}...${currentKey.substring(currentKey.length - 4)}` : currentKey;
+      // Use config.get to go through secure storage interceptor
+      const secureStorage = require('./scripts/secure-storage');
+      const storage = new secureStorage();
+      const currentKey = storage.getApiKey(provider) || '(Not Set)';
+      // Show only first 4 chars for security
+      const maskedKey = currentKey !== '(Not Set)' && currentKey.length > 8
+        ? `${currentKey.substring(0, 4)}...****`
+        : currentKey;
       console.log(`  ${chalk.bold('API Key:')} ${maskedKey}`);
       
       console.log(chalk.yellow('\n🧩 Plugins'));
